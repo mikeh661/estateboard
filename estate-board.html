@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1920">
+<title>EstateBoard · Office Display</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:#0D1117; --surface:#161B22; --border:#30363d; --border2:#21262d;
+    --text:#e6edf3; --muted:#8b949e; --dim:#7d8590; --faint:#484f58;
+    --green:#2ea043; --greenb:#3fb950; --amber:#f0883e;
+    --blue:#388bfd; --purple:#a371f7; --orange:#db6d28;
+    --red:#f85149; --yellow:#d29922;
+  }
+  html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;font-size:12px;overflow:hidden}
+  #board{display:flex;flex-direction:column;width:100vw;height:100vh}
+
+  /* HEADER */
+  #header{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:48px;background:var(--surface);border-bottom:1px solid var(--border)}
+  #agency-name{font-size:14px;font-weight:600;letter-spacing:.05em;text-transform:uppercase}
+  #agency-name span{color:var(--muted);font-weight:400;margin-left:4px}
+  #clock-display{font-size:12px;color:var(--dim);text-align:center;letter-spacing:.03em}
+  #clock-display strong{display:block;font-size:15px;font-weight:500;color:var(--text);letter-spacing:.02em}
+  #live-indicator{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--dim)}
+  .live-dot{width:8px;height:8px;border-radius:50%;background:var(--greenb);animation:lp 2.5s ease-in-out infinite}
+  @keyframes lp{0%,100%{opacity:1}50%{opacity:.3}}
+
+  .hdr-right{display:flex;align-items:center;gap:18px}
+  .theme-btn{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;border-radius:14px;border:1px solid var(--border);background:var(--bg);color:var(--muted);font-family:inherit;font-size:11px;font-weight:500;cursor:pointer;transition:background .12s,color .12s}
+  .theme-btn:hover{color:var(--text);border-color:var(--faint)}
+  .theme-btn .ti{font-size:12px;line-height:1}
+  .theme-btn .ti-sun{display:inline}
+  .theme-btn .ti-moon{display:none}
+  html[data-theme="light"] .theme-btn .ti-sun{display:none}
+  html[data-theme="light"] .theme-btn .ti-moon{display:inline}
+
+  #live-indicator.warn .live-dot{background:var(--yellow);animation:none}
+  #live-indicator.bad .live-dot{background:var(--red);animation:none}
+  #live-indicator.warn,#live-indicator.bad{color:var(--text)}
+  .foot-r{display:flex;align-items:center;gap:14px}
+  .foot-link{background:none;border:none;color:var(--dim);font:inherit;font-size:9px;cursor:pointer;padding:0;text-decoration:underline}
+
+  /* SIGN-IN */
+  #auth{position:fixed;inset:0;z-index:500;background:var(--bg);display:flex;align-items:center;justify-content:center}
+  #auth.hide{display:none}
+  .auth-card{width:440px;max-width:92vw;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:32px}
+  .auth-card h1{font-size:20px;font-weight:600;margin-bottom:6px}
+  .auth-card .sub{font-size:13px;color:var(--muted);margin-bottom:22px;line-height:1.5}
+  .auth-card label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+  .auth-card input{width:100%;height:44px;padding:0 14px;margin-bottom:14px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font:inherit;font-size:15px;outline:none}
+  .auth-card input:focus{border-color:var(--blue)}
+  .auth-card button{width:100%;height:46px;border-radius:8px;border:none;background:var(--blue);color:#fff;font:inherit;font-size:15px;font-weight:600;cursor:pointer}
+  .auth-card button:disabled{opacity:.6}
+  .auth-msg{font-size:12px;color:var(--red);min-height:18px;margin:-4px 0 10px}
+  .auth-card code{font-size:12px;background:var(--border2);padding:1px 5px;border-radius:4px}
+
+  /* PANELS */
+  #panels{display:flex;flex:1;overflow:hidden}
+  .pp{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+  .pp+.pp{border-left:1px solid var(--border)}
+  .ph{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 14px;height:34px;background:var(--surface);border-bottom:1px solid var(--border)}
+  .ph-title{font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--muted);text-transform:uppercase}
+  .ph-count{font-size:10px;color:var(--dim)}
+  .ph-count b{color:var(--text);font-weight:500}
+
+  /* COLUMN LABELS */
+  .cl-row{display:flex;align-items:center;height:22px;padding:0 14px 0 3px;background:var(--bg);border-bottom:1px solid var(--border2)}
+  .cl{font-size:8px;font-weight:600;letter-spacing:.07em;color:var(--faint);text-transform:uppercase}
+  .cl-bar{width:3px;flex-shrink:0;margin-right:9px}
+  .cl-neg{width:24px;flex-shrink:0;margin-right:9px;text-align:center}
+  .cl-addr{flex:1;margin-right:10px}
+  .cl-price{width:62px;flex-shrink:0;margin-right:10px;text-align:right}
+  .cl-days{width:34px;flex-shrink:0;margin-right:10px;text-align:right}
+  .cl-prog{width:70px;flex-shrink:0;margin-right:10px;text-align:left}
+  .cl-comp{width:84px;flex-shrink:0;margin-right:10px;text-align:left}
+  .cl-flag{width:84px;flex-shrink:0;text-align:left}
+
+  /* BANDS */
+  .bw{flex:1;overflow-y:auto;overflow-x:hidden}
+  .bw::-webkit-scrollbar{width:4px}
+  .bw::-webkit-scrollbar-track{background:transparent}
+  .bw::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+  .band{border-bottom:1px solid var(--border2)}
+  .band-hdr{display:flex;align-items:center;gap:8px;height:26px;padding:0 14px 0 3px;background:var(--bg);position:sticky;top:0;z-index:2;border-bottom:1px solid var(--border2)}
+  .band-acc{width:3px;height:14px;border-radius:2px;flex-shrink:0}
+  .band-name{font-size:9px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);flex:1}
+  .band-cnt{font-size:9px;color:var(--dim);background:var(--border2);border-radius:10px;padding:1px 7px;font-variant-numeric:tabular-nums}
+  .empty-msg{padding:32px 16px;font-size:11px;color:var(--faint);line-height:1.6}
+
+  /* ROWS */
+  .pr{display:flex;align-items:center;height:30px;padding:0 14px 0 0;border-top:1px solid var(--border2);transition:background .1s;cursor:pointer}
+  .pr:hover{background:#1c2128}
+  .pr:active{background:#252d38}
+  .p-bar{width:3px;height:30px;flex-shrink:0;margin-right:9px}
+  .p-bar.urgent{background:var(--red);animation:uf 2s ease-in-out infinite}
+  .p-bar.blocked{background:var(--red)}
+  .p-bar.await{background:var(--blue)}
+  .p-bar.delayed{background:var(--yellow)}
+  .p-bar.none{background:transparent}
+  @keyframes uf{0%,100%{opacity:1}50%{opacity:.3}}
+  .p-neg{width:24px;height:24px;border-radius:50%;background:var(--border2);border:.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:8.5px;font-weight:600;color:var(--muted);flex-shrink:0;margin-right:9px}
+  .p-addr{flex:1;min-width:0;font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-right:10px}
+  .p-price{width:62px;flex-shrink:0;font-size:11px;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums;margin-right:10px}
+  .p-days{width:34px;flex-shrink:0;font-size:10px;color:var(--dim);text-align:right;font-variant-numeric:tabular-nums;margin-right:10px}
+  .p-days.warn{color:var(--yellow);font-weight:500}
+  .p-days.danger{color:var(--red);font-weight:600}
+  .p-days.done{color:var(--greenb)}
+  .p-prog{width:70px;flex-shrink:0;display:flex;align-items:center;gap:3px;margin-right:10px}
+  .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+  .dot.on{background:var(--greenb)}
+  .dot.cur{background:var(--blue)}
+  .dot.off{background:var(--border2);border:.5px solid var(--faint)}
+  .p-comp{width:84px;flex-shrink:0;display:flex;align-items:center;gap:2px;margin-right:10px}
+  .cdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+  .cdot.ok  {background:#3fb950}
+  .cdot.warn{background:#d29922}
+  .cdot.bad {background:#f85149}
+  .cdot.na  {background:var(--border2);border:.5px solid var(--faint)}
+  .p-flag{width:84px;flex-shrink:0;display:flex;align-items:center}
+  .flag-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:4px;font-size:9.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;white-space:nowrap;line-height:1.4}
+  .flag-pill.urgent,.flag-pill.blocked{background:rgba(248,81,73,.18);color:#ff7b72;border:1px solid rgba(248,81,73,.35)}
+  .flag-pill.await  {background:rgba(56,139,253,.18);color:#79c0ff;border:1px solid rgba(56,139,253,.35)}
+  .flag-pill.delayed{background:rgba(210,153,34,.18);color:#e3b341;border:1px solid rgba(210,153,34,.35)}
+  .flag-more{font-size:9px;color:var(--dim);margin-left:4px}
+
+  /* FOOTER */
+  #footer{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:28px;background:var(--surface);border-top:1px solid var(--border);font-size:9px;color:var(--faint);letter-spacing:.03em;gap:16px}
+  .legend{display:flex;align-items:center;gap:14px}
+  .li{display:flex;align-items:center;gap:4px;font-size:9px;color:var(--dim)}
+  .lb{width:3px;height:10px;border-radius:1px}
+  .ld{width:7px;height:7px;border-radius:50%}
+
+  /* PROPERTY DETAIL CARD */
+  .card-bg{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;visibility:hidden;transition:opacity .2s,visibility .2s}
+  .card-bg.open{opacity:1;visibility:visible}
+  .card{background:#161B22;border:1px solid var(--border);border-radius:14px;width:820px;max-width:92vw;max-height:88vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.6);transform:translateY(20px);transition:transform .2s}
+  .card-bg.open .card{transform:translateY(0)}
+  .card::-webkit-scrollbar{width:4px}
+  .card::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+  .card-header{display:flex;align-items:flex-start;justify-content:space-between;padding:22px 24px 16px;border-bottom:1px solid var(--border2)}
+  .card-addr{font-size:18px;font-weight:600;color:var(--text);line-height:1.3;flex:1;margin-right:16px}
+  .card-close{background:var(--border2);border:none;color:var(--muted);width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .12s}
+  .card-close:hover{background:var(--border)}
+  .card-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .card-badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid transparent}
+  .cb-let  {background:rgba(56,139,253,.15);color:#79c0ff;border-color:rgba(56,139,253,.3)}
+  .cb-sale {background:rgba(163,113,247,.15);color:#c9a9ff;border-color:rgba(163,113,247,.3)}
+  .cb-price{background:var(--border2);color:var(--text);border-color:var(--border)}
+  .cb-days {background:var(--border2);color:var(--muted);border-color:var(--border)}
+  .cb-days.warn{background:rgba(210,153,34,.15);color:#e3b341;border-color:rgba(210,153,34,.3)}
+  .cb-days.danger{background:rgba(248,81,73,.15);color:#ff7b72;border-color:rgba(248,81,73,.3)}
+  .cb-days.done{background:rgba(46,160,67,.15);color:#3fb950;border-color:rgba(46,160,67,.3)}
+  .card-body{display:grid;grid-template-columns:1fr 1fr;gap:0;padding:0}
+  .card-col{padding:20px 24px}
+  .card-col+.card-col{border-left:1px solid var(--border2)}
+  .card-section{margin-bottom:22px}
+  .card-section:last-child{margin-bottom:0}
+  .cs-title{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:10px;display:flex;justify-content:space-between}
+  .neg-row{display:flex;align-items:center;gap:10px}
+  .neg-av{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+  .neg-details .neg-name{font-size:13px;font-weight:600;color:var(--text)}
+  .neg-details .neg-label{font-size:11px;color:var(--dim);margin-top:1px}
+  .steps{display:flex;flex-direction:column;gap:0}
+  .step{display:flex;align-items:flex-start;gap:10px;padding:6px 0;position:relative}
+  .step-line{position:absolute;left:10px;top:24px;bottom:-6px;width:1px;background:var(--border2)}
+  .step-dot{width:20px;height:20px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;z-index:1}
+  .step-dot.done{background:#1a4d2a;color:#3fb950;border:1.5px solid #2ea043}
+  .step-dot.cur {background:#0d2d56;color:#79c0ff;border:1.5px solid #388bfd;animation:stepglow 2s ease-in-out infinite}
+  .step-dot.pend{background:var(--border2);color:var(--faint);border:1.5px solid var(--border)}
+  @keyframes stepglow{0%,100%{box-shadow:0 0 0 0 rgba(56,139,253,0)}50%{box-shadow:0 0 0 4px rgba(56,139,253,.25)}}
+  .step-label{font-size:12px;padding-top:3px;line-height:1.3}
+  .step-label.done{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--faint)}
+  .step-label.cur {color:var(--text);font-weight:500}
+  .step-label.pend{color:var(--faint)}
+  .comp-rows{display:flex;flex-direction:column;gap:6px}
+  .comp-row-item{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;background:var(--border2)}
+  .comp-row-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+  .comp-row-dot.ok  {background:#3fb950}
+  .comp-row-dot.warn{background:#d29922}
+  .comp-row-dot.bad {background:#f85149}
+  .comp-row-dot.na  {background:var(--faint)}
+  .comp-row-label{font-size:12px;color:var(--text);flex:1}
+  .comp-row-item.na .comp-row-label{color:var(--dim)}
+  .comp-row-expiry{font-size:10px;color:var(--dim);white-space:nowrap}
+  .comp-row-status{font-size:9px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:2px 6px;border-radius:3px;white-space:nowrap}
+  .comp-row-status.ok  {background:#1a4d2a;color:#3fb950}
+  .comp-row-status.warn{background:#3d2e0a;color:#e3b341}
+  .comp-row-status.bad {background:#3d1212;color:#ff7b72}
+  .comp-row-status.na  {background:var(--border);color:var(--dim)}
+  .card-flags{display:flex;flex-wrap:wrap;gap:6px}
+  .card-flag-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:5px;font-size:11px;font-weight:700;letter-spacing:.03em;text-transform:uppercase}
+  .card-flag-pill.urgent,.card-flag-pill.blocked{background:rgba(248,81,73,.18);color:#ff7b72;border:1px solid rgba(248,81,73,.35)}
+  .card-flag-pill.await  {background:rgba(56,139,253,.18);color:#79c0ff;border:1px solid rgba(56,139,253,.35)}
+  .card-flag-pill.delayed{background:rgba(210,153,34,.18);color:#e3b341;border:1px solid rgba(210,153,34,.35)}
+  .card-notes{font-size:12px;color:var(--muted);line-height:1.6;background:var(--border2);border-radius:6px;padding:10px 12px;white-space:pre-wrap}
+  .prog-bar-wrap{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+  .prog-bar-track{flex:1;height:5px;background:var(--border2);border-radius:3px;overflow:hidden}
+  .prog-bar-fill{height:100%;border-radius:3px;background:#2ea043;transition:width .4s}
+  .prog-bar-label{font-size:11px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+  /* LIGHT THEME */
+  html[data-theme="light"]{
+    --bg:#f4f5f7; --surface:#ffffff; --border:#d0d7de; --border2:#e6e9ed;
+    --text:#1f2328; --muted:#59636e; --dim:#6e7781; --faint:#8c959f;
+    --green:#1a7f37; --greenb:#1f883d; --blue:#0969da; --red:#cf222e; --yellow:#bf8700;
+  }
+  html[data-theme="light"] .pr:hover{background:#eef1f4}
+  html[data-theme="light"] .pr:active{background:#e2e7ec}
+  html[data-theme="light"] .p-days.warn{color:#9a6700}
+  html[data-theme="light"] .cdot.ok,html[data-theme="light"] .comp-row-dot.ok{background:#1f883d}
+  html[data-theme="light"] .cdot.warn,html[data-theme="light"] .comp-row-dot.warn{background:#bf8700}
+  html[data-theme="light"] .cdot.bad,html[data-theme="light"] .comp-row-dot.bad{background:#cf222e}
+  html[data-theme="light"] .dot.off,html[data-theme="light"] .cdot.na{background:#e6e9ed;border-color:#afb8c1}
+  html[data-theme="light"] .flag-pill.urgent,html[data-theme="light"] .flag-pill.blocked,
+  html[data-theme="light"] .card-flag-pill.urgent,html[data-theme="light"] .card-flag-pill.blocked{background:#ffebe9;color:#cf222e;border-color:#ffcecb}
+  html[data-theme="light"] .flag-pill.await,html[data-theme="light"] .card-flag-pill.await{background:#ddf4ff;color:#0969da;border-color:#b6e3ff}
+  html[data-theme="light"] .flag-pill.delayed,html[data-theme="light"] .card-flag-pill.delayed{background:#fff8c5;color:#9a6700;border-color:#f5e0a0}
+  html[data-theme="light"] .card-bg{background:rgba(31,35,40,.45)}
+  html[data-theme="light"] .card{background:#ffffff;box-shadow:0 24px 64px rgba(31,35,40,.25)}
+  html[data-theme="light"] .cb-let{background:#ddf4ff;color:#0969da;border-color:#b6e3ff}
+  html[data-theme="light"] .cb-sale{background:#fbefff;color:#8250df;border-color:#e9d3ff}
+  html[data-theme="light"] .cb-days.warn{background:#fff8c5;color:#9a6700;border-color:#f5e0a0}
+  html[data-theme="light"] .cb-days.danger{background:#ffebe9;color:#cf222e;border-color:#ffcecb}
+  html[data-theme="light"] .cb-days.done{background:#dafbe1;color:#1a7f37;border-color:#aceebb}
+  html[data-theme="light"] .step-dot.done{background:#dafbe1;color:#1a7f37;border-color:#1f883d}
+  html[data-theme="light"] .step-dot.cur{background:#ddf4ff;color:#0969da;border-color:#0969da}
+  html[data-theme="light"] .comp-row-status.ok{background:#dafbe1;color:#1a7f37}
+  html[data-theme="light"] .comp-row-status.warn{background:#fff8c5;color:#9a6700}
+  html[data-theme="light"] .comp-row-status.bad{background:#ffebe9;color:#cf222e}
+  html[data-theme="light"] .comp-row-status.na{background:#e6e9ed;color:#59636e}
+  html[data-theme="light"] .prog-bar-fill{background:#1f883d}
+</style>
+</head>
+<body>
+<div id="board">
+  <div id="header">
+    <div id="agency-name">Castle Estates <span>Property Experts</span></div>
+    <div id="clock-display">
+      <strong id="clk-t">00:00</strong>
+      <span id="clk-d">Loading…</span>
+    </div>
+    <div class="hdr-right">
+      <button id="theme-btn" class="theme-btn" onclick="toggleTheme()" title="Switch light / dark (T)">
+        <span class="ti ti-sun">☀️</span><span class="ti ti-moon">🌙</span><span id="theme-lbl">Light</span>
+      </button>
+      <div id="live-indicator">
+        <div class="live-dot"></div>
+        <span id="live-txt">Connecting…</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="panels">
+    <div class="pp">
+      <div class="ph">
+        <div class="ph-title">Lettings Pipeline</div>
+        <div class="ph-count"><b id="let-ct">–</b> active properties</div>
+      </div>
+      <div class="cl-row">
+        <div class="cl-bar"></div>
+        <div class="cl cl-neg">Neg</div>
+        <div class="cl cl-addr">Address</div>
+        <div class="cl cl-price">Rent/mo</div>
+        <div class="cl cl-days">Days</div>
+        <div class="cl cl-prog">Progress</div>
+        <div class="cl cl-comp">Compliance</div>
+        <div class="cl cl-flag">Flag</div>
+      </div>
+      <div class="bw" id="let-bands"></div>
+    </div>
+
+    <div class="pp">
+      <div class="ph">
+        <div class="ph-title">Sales Pipeline</div>
+        <div class="ph-count"><b id="sal-ct">–</b> active properties</div>
+      </div>
+      <div class="cl-row">
+        <div class="cl-bar"></div>
+        <div class="cl cl-neg">Neg</div>
+        <div class="cl cl-addr">Address</div>
+        <div class="cl cl-price">Asking</div>
+        <div class="cl cl-days">Days</div>
+        <div class="cl cl-prog">Progress</div>
+        <div class="cl cl-comp">Compliance</div>
+        <div class="cl cl-flag">Flag</div>
+      </div>
+      <div class="bw" id="sal-bands"></div>
+    </div>
+  </div>
+
+  <div id="footer">
+    <div class="legend">
+      <div class="li"><div class="lb" style="background:var(--red)"></div>Urgent / Blocked</div>
+      <div class="li"><div class="lb" style="background:var(--blue)"></div>Awaiting Response</div>
+      <div class="li"><div class="lb" style="background:var(--yellow)"></div>Delayed</div>
+    </div>
+    <div class="legend">
+      <span>Compliance:</span>
+      <div class="li"><div class="cdot ok"></div>Valid</div>
+      <div class="li"><div class="cdot warn"></div>Expiring</div>
+      <div class="li"><div class="cdot bad"></div>Missing / Expired</div>
+      <div class="li"><div class="cdot na"></div>Not yet due / N/A</div>
+    </div>
+    <div>Days in stage &nbsp;·&nbsp; <span style="color:var(--yellow)">amber 14d+</span> &nbsp;·&nbsp; <span style="color:var(--red)">red 28d+</span></div>
+    <div class="foot-r"><span id="last-upd">–</span><span id="foot-who"></span><button class="foot-link" onclick="signOutBoard()">Sign out</button></div>
+  </div>
+</div>
+
+<!-- PROPERTY DETAIL CARD -->
+<div class="card-bg" id="card-bg" onclick="if(event.target===this)closeCard()">
+  <div class="card" id="card-inner">
+    <div class="card-header">
+      <div>
+        <div class="card-addr" id="card-addr">–</div>
+        <div class="card-meta" id="card-meta"></div>
+      </div>
+      <button class="card-close" onclick="closeCard()">×</button>
+    </div>
+    <div class="card-body">
+      <div class="card-col" id="card-col-left"></div>
+      <div class="card-col" id="card-col-right"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SIGN-IN -->
+<div id="auth">
+  <div class="auth-card">
+    <h1>EstateBoard</h1>
+    <div id="auth-form">
+      <div class="sub">Sign in once on this screen. It stays signed in after that.<br>Use the TV's view-only login.</div>
+      <form onsubmit="doLogin();return false;">
+        <label for="li-email">Email</label><input id="li-email" type="email" autocomplete="username" required>
+        <label for="li-pw">Password</label><input id="li-pw" type="password" autocomplete="current-password" required>
+        <div class="auth-msg" id="auth-msg"></div>
+        <button id="li-btn" type="submit">Sign in</button>
+      </form>
+    </div>
+    <div id="auth-setup" class="sub" style="display:none;margin:0">This board isn't connected to a database yet. Fill in <code>estateboard-config.js</code> using the steps in <code>SETUP.md</code>, then reload.</div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="estateboard-config.js"></script>
+<script>
+const LOCAL_THEME_KEY='estateboard_theme_here';
+
+/* ── SHARED DEFINITIONS: keep in sync with estate-board-admin.html ─────── */
+const LS=[
+  {slug:'available',   label:'Available',                colour:'#2ea043'},
+  {slug:'under_offer', label:'Under Offer / Let Agreed', colour:'#f0883e'},
+  {slug:'referencing', label:'Referencing in Progress',  colour:'#388bfd'},
+  {slug:'ref_complete',label:'Referencing Complete',     colour:'#a371f7'},
+  {slug:'move_pending',label:'Move-in Pending',          colour:'#db6d28'},
+  {slug:'let',         label:'Let',                      colour:'#3fb950'},
+];
+const SS=[
+  {slug:'available',label:'Available',                      colour:'#2ea043'},
+  {slug:'sstc',     label:'Under Offer / SSTC',             colour:'#f0883e'},
+  {slug:'legal',    label:'Legal / Searches in Progress',   colour:'#388bfd'},
+  {slug:'mortgage', label:'Mortgage / Finance in Progress', colour:'#a371f7'},
+  {slug:'exchange', label:'Exchange Pending',               colour:'#db6d28'},
+  {slug:'sold',     label:'Sold',                           colour:'#3fb950'},
+];
+const CL=['Offer accepted','Referencing sent','Referencing received','Referencing passed','Tenancy documents issued','Deposit received','Move-in booked'];
+const CS=['Offer accepted','Memorandum issued','Solicitors instructed','Mortgage underway','Searches underway','Exchange agreed','Completion booked'];
+const COMPLETE_STAGES=['let','sold'];
+const FLAG_ORDER=['urgent','blocked','await','delayed'];
+const COMP={
+  lettings:[
+    {key:'gas',     label:'Gas Safety Certificate',        expiry:true, na:true, from:'available'},
+    {key:'epc',     label:'EPC',                           expiry:true, na:false,from:'available'},
+    {key:'eicr',    label:'EICR',                          expiry:true, na:false,from:'available'},
+    {key:'alarms',  label:'Smoke & CO alarms checked',     expiry:false,na:false,from:'available'},
+    {key:'licence', label:'Property licence',              expiry:true, na:true, from:'available'},
+    {key:'contract',label:'Landlord terms signed',         expiry:false,na:false,from:'available'},
+    {key:'rtr',     label:'Right to Rent check',           expiry:false,na:false,from:'referencing'},
+    {key:'htr',     label:'How to Rent guide served',      expiry:false,na:false,from:'move_pending'},
+    {key:'deposit', label:'Deposit protected & PI served', expiry:false,na:true, from:'let'},
+  ],
+  sales:[
+    {key:'contract',  label:'Vendor terms signed',  expiry:false,na:false,from:'available'},
+    {key:'epc',       label:'EPC',                  expiry:true, na:false,from:'available'},
+    {key:'aml_seller',label:'Seller AML / ID check',expiry:false,na:false,from:'available'},
+    {key:'aml_buyer', label:'Buyer AML / ID check', expiry:false,na:false,from:'sstc'},
+  ]
+};
+const COMP_TONE={ok:'ok',expiring:'warn',expired:'bad',missing:'bad',nodate:'bad',pending:'na',na:'na'};
+const COMP_LABEL={ok:'Valid',expiring:'Expiring soon',expired:'Expired',missing:'Missing',nodate:'No expiry date',pending:'Not yet due',na:'N/A'};
+
+const pad=n=>String(n).padStart(2,'0');
+const parseYMD=s=>{const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(s||'');return m?new Date(+m[1],+m[2]-1,+m[3]):null;};
+const midnight=()=>{const d=new Date();d.setHours(0,0,0,0);return d;};
+const calcDays=s=>{const d=parseYMD(s);return d?Math.max(0,Math.round((midnight()-d)/86400000)):0;};
+const daysUntil=s=>{const d=parseYMD(s);return d?Math.round((d-midnight())/86400000):null;};
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+const stagesFor=pl=>pl==='sales'?SS:LS;
+const stageIdx=(pl,slug)=>stagesFor(pl).findIndex(s=>s.slug===slug);
+const isComplete=p=>COMPLETE_STAGES.includes(p.stage);
+const primaryFlag=flags=>FLAG_ORDER.find(f=>(flags||[]).includes(f))||null;
+const fmtDate=s=>{const d=parseYMD(s);return d?d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'';};
+
+function normItem(it){
+  if(!it)return{status:'',expiry:''};
+  const status=it.status!==undefined?it.status:(it.done?'done':'');
+  return{status:status||'',expiry:it.expiry||''};
+}
+function compStatus(def,item,pl,stage){
+  const it=normItem(item);
+  if(it.status==='na'&&def.na)return'na';
+  if(it.status==='done'){
+    if(def.expiry){
+      if(!it.expiry)return'nodate';
+      const d=daysUntil(it.expiry);
+      if(d<0)return'expired';
+      if(d<60)return'expiring';
+    }
+    return'ok';
+  }
+  if(stageIdx(pl,stage)<stageIdx(pl,def.from))return'pending';
+  return'missing';
+}
+// Index of the current step: first unticked step, but only once something is ticked
+function currentStep(cl){
+  const c=cl||[];
+  if(!c.some(Boolean))return -1;
+  return c.findIndex(x=>!x);
+}
+/* ── END SHARED ────────────────────────────────────────────────────────── */
+
+const NEG_COLOURS=[
+  {bg:'#1a1f6e',fg:'#a5b4fc'},{bg:'#0d2d56',fg:'#93c5fd'},{bg:'#0a3728',fg:'#6ee7b7'},
+  {bg:'#4a0d35',fg:'#f9a8d4'},{bg:'#4a0d18',fg:'#fda4af'},{bg:'#422006',fg:'#fcd34d'},
+  {bg:'#2e1065',fg:'#c4b5fd'},{bg:'#042f2e',fg:'#5eead4'},{bg:'#082f49',fg:'#7dd3fc'},
+  {bg:'#1c1917',fg:'#d6d3d1'}
+];
+const NEG_COLOURS_LIGHT=[
+  {bg:'#e0e7ff',fg:'#3730a3'},{bg:'#dbeafe',fg:'#1e40af'},{bg:'#d1fae5',fg:'#065f46'},
+  {bg:'#fce7f3',fg:'#9d174d'},{bg:'#ffe4e6',fg:'#9f1239'},{bg:'#fef3c7',fg:'#92400e'},
+  {bg:'#f3e8ff',fg:'#6b21a8'},{bg:'#ccfbf1',fg:'#134e4a'},{bg:'#e0f2fe',fg:'#0c4a6e'},
+  {bg:'#f1f5f9',fg:'#374151'}
+];
+const FLAG_LABELS={urgent:'⚑ Urgent',blocked:'✖ Blocked',await:'◉ Awaiting',delayed:'◐ Delayed'};
+const FLAG_LABELS_LONG={urgent:'⚑ Urgent',blocked:'✖ Blocked',await:'◉ Awaiting Response',delayed:'◐ Delayed'};
+
+let DATA=null,NEG_MAP={},openId=null;
+let URL_THEME=(new URLSearchParams(location.search).get('theme')||'').toLowerCase();
+function localTheme(){try{return localStorage.getItem(LOCAL_THEME_KEY)||'';}catch(e){return'';}}
+function applyTheme(s){
+  const lt=localTheme();
+  const t=['light','dark'].includes(URL_THEME)?URL_THEME:['light','dark'].includes(lt)?lt:(s.boardTheme==='light'?'light':'dark');
+  document.documentElement.dataset.theme=t;
+  // Button names the theme you'll switch TO
+  document.getElementById('theme-lbl').textContent=t==='light'?'Dark':'Light';
+}
+function toggleTheme(){
+  const next=document.documentElement.dataset.theme==='light'?'dark':'light';
+  URL_THEME='';  // a tap on the board takes over from any ?theme= in the address
+  const setLocal=v=>{try{v?localStorage.setItem(LOCAL_THEME_KEY,v):localStorage.removeItem(LOCAL_THEME_KEY);}catch(e){}};
+  setLocal(next);  // show it straight away
+  render();
+  // Save it for everyone; if this login isn't allowed, it stays on this screen only
+  if(db&&ME)sDoc().set({boardTheme:next},{merge:true}).then(()=>{setLocal('');}).catch(()=>{});
+}
+
+/* ── DATABASE ──────────────────────────────────────────────────────────── */
+const CONFIG=window.ESTATEBOARD_CONFIG||{};
+const FB=CONFIG.firebase||{};
+const OWNER_EMAIL=String(CONFIG.ownerEmail||'').trim().toLowerCase();
+const CONFIGURED=!!(FB.apiKey&&FB.projectId&&!/PASTE/i.test(FB.apiKey+FB.projectId));
+let auth=null,db=null,ME=null,unsubs=[],authNote='';
+let STORE={properties:[],negotiators:[],settings:{}},LOADED=false,LAST_SYNC=null,ONLINE=true;
+const sDoc=()=>db.collection('meta').doc('settings');
+
+function buildData(){return{properties:STORE.properties,negotiators:STORE.negotiators,settings:STORE.settings||{}};}
+function docToObj(d){
+  const o=d.data({serverTimestamps:'estimate'})||{};
+  o.id=d.id;
+  if(o.updatedAt&&typeof o.updatedAt.toMillis==='function')o.updatedAt=o.updatedAt.toMillis();
+  return o;
+}
+function friendly(e){
+  const c=(e&&e.code)||'';
+  if(c==='auth/wrong-password'||c==='auth/user-not-found'||c==='auth/invalid-credential'||c==='auth/invalid-login-credentials')return'email or password not recognised.';
+  if(c==='auth/too-many-requests')return'too many attempts. Wait a few minutes and try again.';
+  if(c==='auth/network-request-failed')return'no internet connection.';
+  if(c==='auth/invalid-email')return'that email address does not look right.';
+  return(e&&e.message)||String(e);
+}
+function setLive(state,txt){
+  const el=document.getElementById('live-indicator');
+  el.className=state==='ok'?'':state;
+  document.getElementById('live-txt').textContent=txt;
+}
+function showLogin(){
+  document.getElementById('auth').classList.remove('hide');
+  document.getElementById('auth-form').style.display='';
+  document.getElementById('auth-setup').style.display='none';
+  document.getElementById('auth-msg').textContent=authNote;authNote='';
+  const b=document.getElementById('li-btn');b.disabled=false;b.textContent='Sign in';
+}
+function showSetupNeeded(msg){
+  document.getElementById('auth').classList.remove('hide');
+  document.getElementById('auth-form').style.display='none';
+  const el=document.getElementById('auth-setup');el.style.display='';
+  if(msg)el.textContent=msg;
+}
+async function doLogin(){
+  const b=document.getElementById('li-btn'),m=document.getElementById('auth-msg');
+  m.textContent='';b.disabled=true;b.textContent='Signing in…';
+  try{await auth.signInWithEmailAndPassword(document.getElementById('li-email').value.trim(),document.getElementById('li-pw').value);document.getElementById('li-pw').value='';}
+  catch(e){m.textContent='Sign-in failed: '+friendly(e);b.disabled=false;b.textContent='Sign in';}
+}
+function signOutBoard(){if(auth&&confirm('Sign this screen out of the board?'))auth.signOut();}
+
+async function onAuth(u){
+  unsubs.forEach(f=>{try{f();}catch(e){}});unsubs=[];
+  STORE={properties:[],negotiators:[],settings:{}};LOADED=false;closeCard();
+  if(!u){ME=null;render();showLogin();return;}
+  const email=String(u.email||'').toLowerCase();
+  let prof=null;
+  try{const s=await db.collection('users').doc(u.uid).get();prof=s.exists?s.data():null;}catch(e){console.error(e);}
+  const role=email===OWNER_EMAIL?'owner':(prof?prof.role:null);
+  if(!['owner','editor','viewer'].includes(role)){
+    authNote='This login has not been given access to the board.';
+    await auth.signOut();return;
+  }
+  ME={uid:u.uid,email,name:(prof&&prof.name)||email,role};
+  document.getElementById('auth').classList.add('hide');
+  document.getElementById('foot-who').textContent='Signed in: '+ME.name;
+  setLive('warn','Connecting…');
+  const fail=e=>{
+    console.error(e);
+    if(e&&e.code==='permission-denied'){
+      if(!ME)return;
+      ME=null;unsubs.forEach(f=>{try{f();}catch(x){}});unsubs=[];
+      authNote='This screen no longer has access. Sign in again.';auth.signOut();return;
+    }
+    setLive('bad','Connection lost');
+  };
+  const got=snap=>{
+    LAST_SYNC=new Date();
+    if(snap.metadata&&snap.metadata.fromCache)setLive('warn',ONLINE?'Reconnecting…':'Offline, showing last update');
+    else setLive('ok','Live board');
+  };
+  unsubs.push(db.collection('properties').onSnapshot({includeMetadataChanges:true},snap=>{STORE.properties=snap.docs.map(docToObj);LOADED=true;got(snap);renderSoon();},fail));
+  unsubs.push(db.collection('negotiators').onSnapshot(snap=>{STORE.negotiators=snap.docs.map(docToObj);renderSoon();},fail));
+  unsubs.push(sDoc().onSnapshot(snap=>{STORE.settings=snap.exists?(snap.data()||{}):{};renderSoon();},fail));
+}
+let _rs=null;
+function renderSoon(){if(_rs)return;_rs=setTimeout(()=>{_rs=null;render();},0);}
+window.addEventListener('online',()=>{ONLINE=true;setLive('warn','Reconnecting…');});
+window.addEventListener('offline',()=>{ONLINE=false;setLive('bad','Offline, showing last update');});
+
+// Stop the TV's screen saver kicking in while the board is up (where the browser allows it)
+let wakeLock=null;
+async function keepAwake(){
+  try{if('wakeLock' in navigator&&document.visibilityState==='visible'&&!wakeLock){wakeLock=await navigator.wakeLock.request('screen');wakeLock.addEventListener('release',()=>{wakeLock=null;});}}catch(e){}
+}
+document.addEventListener('visibilitychange',keepAwake);
+
+function negFor(p){
+  const n=NEG_MAP[p.negotiatorId];
+  if(n){
+    const pal=document.documentElement.dataset.theme==='light'?NEG_COLOURS_LIGHT:NEG_COLOURS;
+    const c=pal[(n.colourIdx||0)%pal.length];
+    return{name:n.name,initials:n.initials,bg:c.bg,fg:c.fg};
+  }
+  return{name:p.negotiatorName||'Unassigned',initials:p.negotiatorInitials||'?',bg:null,fg:null};
+}
+
+function dayInfo(p){
+  if(isComplete(p))return{label:'✓',cls:'done'};
+  const d=calcDays(p.enteredStageAt);
+  return{label:d+'d',cls:d>=28?'danger':d>=14?'warn':'',days:d};
+}
+
+function makeDots(cl){
+  const c=cl||Array(7).fill(false),cur=currentStep(c);
+  return c.map((v,i)=>`<div class="dot ${v?'on':i===cur?'cur':'off'}"></div>`).join('');
+}
+
+function makeCompDots(p){
+  const comp=p.compliance||{};
+  return (COMP[p.pipeline]||[]).map(def=>{
+    const it=normItem(comp[def.key]);
+    const st=compStatus(def,it,p.pipeline,p.stage);
+    const tip=def.label+': '+COMP_LABEL[st]+(def.expiry&&it.expiry&&it.status==='done'?` (exp ${fmtDate(it.expiry)})`:'');
+    return`<div class="cdot ${COMP_TONE[st]}" title="${esc(tip)}"></div>`;
+  }).join('');
+}
+
+function flagCell(flags){
+  const f=primaryFlag(flags);
+  if(!f)return'<div class="p-flag"></div>';
+  const extra=(flags||[]).filter(x=>FLAG_ORDER.includes(x)).length-1;
+  return`<div class="p-flag"><span class="flag-pill ${f}">${FLAG_LABELS[f]}</span>${extra>0?`<span class="flag-more">+${extra}</span>`:''}</div>`;
+}
+
+function renderBands(containerId,stages,props){
+  const el=document.getElementById(containerId);
+  let html='';
+  stages.forEach(stage=>{
+    const rows=props.filter(p=>p.stage===stage.slug);
+    if(!rows.length)return;
+    // Completed: most recent first. Everything else: longest in stage first.
+    const done=COMPLETE_STAGES.includes(stage.slug);
+    rows.sort((a,b)=>done?calcDays(a.enteredStageAt)-calcDays(b.enteredStageAt):calcDays(b.enteredStageAt)-calcDays(a.enteredStageAt));
+    html+=`<div class="band">
+      <div class="band-hdr">
+        <div class="band-acc" style="background:${stage.colour}"></div>
+        <div class="band-name">${esc(stage.label)}</div>
+        <div class="band-cnt">${rows.length}</div>
+      </div>`;
+    rows.forEach(p=>{
+      const di=dayInfo(p);
+      const bar=primaryFlag(p.flags)||'none';
+      const n=negFor(p);
+      const negStyle=n.bg?` style="background:${n.bg};color:${n.fg};border-color:transparent"`:'';
+      html+=`<div class="pr" onclick="openCard('${esc(p.id)}')">
+        <div class="p-bar ${bar}"></div>
+        <div class="p-neg"${negStyle} title="${esc(n.name)}">${esc(String(n.initials).substr(0,2))}</div>
+        <div class="p-addr" title="${esc(p.displayAddr)}">${esc(p.displayAddr)}</div>
+        <div class="p-price">${esc(p.price||'–')}</div>
+        <div class="p-days ${di.cls}">${di.label}</div>
+        <div class="p-prog">${makeDots(p.checklist)}</div>
+        <div class="p-comp">${makeCompDots(p)}</div>
+        ${flagCell(p.flags)}
+      </div>`;
+    });
+    html+='</div>';
+  });
+  if(!html)html='<div class="empty-msg">No properties in this pipeline</div>';
+  el.innerHTML=html;
+}
+
+function render(){
+  DATA=buildData();
+  const s=DATA.settings||{};
+  applyTheme(s);
+  const name=s.agencyName||'Castle Estates';
+  document.getElementById('agency-name').innerHTML=esc(name)+(s.agencyTagline?` <span>${esc(s.agencyTagline)}</span>`:'');
+  NEG_MAP={};
+  ((DATA&&DATA.negotiators)||[]).forEach(n=>{NEG_MAP[n.id]=n;});
+  const props=DATA?DATA.properties.filter(p=>!p.archived):[];
+  if(!LOADED||!DATA.properties.length){
+    const msg=!ME?'':!LOADED?'Loading…':'No properties yet.<br>Add some from the admin page.';
+    ['let-bands','sal-bands'].forEach(id=>{
+      document.getElementById(id).innerHTML=msg?'<div class="empty-msg">'+msg+'</div>':'';
+    });
+  }else{
+    renderBands('let-bands',LS,props.filter(p=>p.pipeline==='lettings'));
+    renderBands('sal-bands',SS,props.filter(p=>p.pipeline==='sales'));
+  }
+  document.getElementById('let-ct').textContent=props.filter(p=>p.pipeline==='lettings').length;
+  document.getElementById('sal-ct').textContent=props.filter(p=>p.pipeline==='sales').length;
+  document.getElementById('last-upd').textContent=LAST_SYNC?'Last change received: '+pad(LAST_SYNC.getHours())+':'+pad(LAST_SYNC.getMinutes())+':'+pad(LAST_SYNC.getSeconds()):'';
+  // Keep an open card in step with the latest data
+  if(openId){
+    if(props.find(p=>p.id===openId))openCard(openId);else closeCard();
+  }
+}
+
+function updateClock(){
+  const now=new Date();
+  document.getElementById('clk-t').textContent=pad(now.getHours())+':'+pad(now.getMinutes());
+  document.getElementById('clk-d').textContent=now.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+}
+
+/* ── DETAIL CARD ───────────────────────────────────────────────────────── */
+function openCard(id){
+  if(!DATA)return;
+  const p=DATA.properties.find(x=>x.id===id&&!x.archived);
+  if(!p)return;
+  openId=id;
+  const isLet=p.pipeline==='lettings';
+  const di=dayInfo(p);
+  const stage=stagesFor(p.pipeline).find(s=>s.slug===p.stage)||{label:p.stage,colour:'#8b949e'};
+  const labels=isLet?CL:CS;
+  const cl=p.checklist||Array(7).fill(false);
+  const doneCount=cl.filter(Boolean).length;
+  const pct=Math.round(doneCount/labels.length*100);
+  const cur=currentStep(cl);
+
+  document.getElementById('card-addr').textContent=p.displayAddr;
+  const daysTxt=di.cls==='done'?'✓ Complete':di.days===0?'Entered stage today':di.days+'d in stage';
+  document.getElementById('card-meta').innerHTML=`
+    <span class="card-badge ${isLet?'cb-let':'cb-sale'}">${isLet?'🏠 Lettings':'🏷 Sales'}</span>
+    <span class="card-badge" style="background:${stage.colour}22;color:${stage.colour};border-color:${stage.colour}55">${esc(stage.label)}</span>
+    <span class="card-badge cb-price">${esc(p.price||'–')}</span>
+    <span class="card-badge cb-days ${di.cls}">${daysTxt}</span>`;
+
+  const n=negFor(p);
+  const negHtml=`
+    <div class="card-section">
+      <div class="cs-title">Negotiator</div>
+      <div class="neg-row">
+        <div class="neg-av" style="background:${n.bg||'var(--border2)'};color:${n.fg||'var(--muted)'}">${esc(String(n.initials).substr(0,2))}</div>
+        <div class="neg-details">
+          <div class="neg-name">${esc(n.name)}</div>
+          <div class="neg-label">Assigned negotiator</div>
+        </div>
+      </div>
+    </div>`;
+
+  const stepsHtml=`
+    <div class="card-section">
+      <div class="cs-title">Progression</div>
+      <div class="prog-bar-wrap">
+        <div class="prog-bar-track"><div class="prog-bar-fill" style="width:${pct}%"></div></div>
+        <div class="prog-bar-label">${doneCount}/${labels.length} steps</div>
+      </div>
+      <div class="steps">
+        ${labels.map((lbl,i)=>{
+          const state=cl[i]?'done':i===cur?'cur':'pend';
+          const icon={done:'✓',cur:'→',pend:String(i+1)}[state];
+          return`<div class="step">
+            ${i<labels.length-1?'<div class="step-line"></div>':''}
+            <div class="step-dot ${state}">${icon}</div>
+            <div class="step-label ${state}">${esc(lbl)}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  document.getElementById('card-col-left').innerHTML=negHtml+stepsHtml;
+
+  const flags=FLAG_ORDER.filter(f=>(p.flags||[]).includes(f));
+  const flagsHtml=flags.length?`
+    <div class="card-section">
+      <div class="cs-title">Flags</div>
+      <div class="card-flags">${flags.map(f=>`<span class="card-flag-pill ${f}">${FLAG_LABELS_LONG[f]}</span>`).join('')}</div>
+    </div>`:'';
+
+  const comp=p.compliance||{};
+  let ok=0,total=0;
+  const rows=(COMP[p.pipeline]||[]).map(def=>{
+    const it=normItem(comp[def.key]);
+    const st=compStatus(def,it,p.pipeline,p.stage);
+    const tone=COMP_TONE[st];
+    if(tone!=='na'){total++;if(tone!=='bad')ok++;}
+    const exp=def.expiry&&it.status==='done'&&it.expiry?`<span class="comp-row-expiry">Exp ${fmtDate(it.expiry)}</span>`:'';
+    return`<div class="comp-row-item ${tone==='na'?'na':''}">
+      <div class="comp-row-dot ${tone}"></div>
+      <span class="comp-row-label">${esc(def.label)}</span>
+      ${exp}
+      <span class="comp-row-status ${tone}">${COMP_LABEL[st]}</span>
+    </div>`;
+  }).join('');
+  const compHtml=`
+    <div class="card-section">
+      <div class="cs-title"><span>Compliance</span><span>${total?ok+'/'+total+' in order':''}</span></div>
+      <div class="comp-rows">${rows}</div>
+    </div>`;
+
+  // Only the board note is shown here. Internal notes stay in admin.
+  const noteHtml=p.boardNote?`
+    <div class="card-section">
+      <div class="cs-title">Note</div>
+      <div class="card-notes">${esc(p.boardNote)}</div>
+    </div>`:'';
+
+  let updHtml='';
+  if(p.updatedBy){
+    const u=p.updatedAt?new Date(p.updatedAt):null;
+    updHtml=`<div class="card-section"><div class="cs-title" style="margin-bottom:0;text-transform:none;letter-spacing:0;font-weight:500;font-size:11px;color:var(--dim)">Last updated by ${esc(p.updatedBy)}${u?' · '+u.toLocaleDateString('en-GB',{day:'numeric',month:'short'})+', '+pad(u.getHours())+':'+pad(u.getMinutes()):''}</div></div>`;
+  }
+  document.getElementById('card-col-right').innerHTML=flagsHtml+compHtml+noteHtml+updHtml;
+  document.getElementById('card-bg').classList.add('open');
+}
+
+function closeCard(){
+  openId=null;
+  document.getElementById('card-bg').classList.remove('open');
+}
+
+/* ── AUTO-SCROLL (for panels taller than the screen) ───────────────────── */
+const scrollers=[];
+function setupAutoScroll(id){
+  const el=document.getElementById(id);
+  const s={el,pos:null,pauseUntil:Date.now()+8000,atBottom:false};
+  const hold=()=>{s.pauseUntil=Date.now()+30000;s.pos=null;s.atBottom=false;};
+  ['pointerdown','wheel','touchstart','keydown'].forEach(ev=>el.addEventListener(ev,hold,{passive:true}));
+  scrollers.push(s);
+}
+function tickScroll(){
+  if(openId)return;
+  const now=Date.now();
+  scrollers.forEach(s=>{
+    const el=s.el,max=el.scrollHeight-el.clientHeight;
+    if(max<=2){s.pos=null;return;}
+    if(now<s.pauseUntil)return;
+    if(s.atBottom){el.scrollTop=0;s.pos=0;s.atBottom=false;s.pauseUntil=now+8000;return;}
+    if(s.pos==null)s.pos=el.scrollTop;
+    s.pos=Math.min(max,s.pos+0.6);
+    el.scrollTop=s.pos;
+    if(s.pos>=max-0.5){s.atBottom=true;s.pauseUntil=now+6000;}
+  });
+}
+
+/* ── INIT ──────────────────────────────────────────────────────────────── */
+setupAutoScroll('let-bands');
+setupAutoScroll('sal-bands');
+updateClock();
+setInterval(updateClock,10000);
+setInterval(render,60000);           // keeps day counts right past midnight
+setInterval(tickScroll,60);
+keepAwake();
+(function init(){
+  if(typeof firebase==='undefined'){showSetupNeeded('Could not load the database code. Check this screen is online, then reload.');return;}
+  if(!CONFIGURED){showSetupNeeded();return;}
+  firebase.initializeApp(FB);
+  auth=firebase.auth();db=firebase.firestore();
+  auth.onAuthStateChanged(u=>{onAuth(u).catch(e=>{console.error(e);authNote='Something went wrong: '+friendly(e);showLogin();});});
+})();
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape')closeCard();
+  if((e.key==='t'||e.key==='T')&&!e.ctrlKey&&!e.metaKey&&!e.altKey)toggleTheme();
+});
+</script>
+</body>
+</html>
