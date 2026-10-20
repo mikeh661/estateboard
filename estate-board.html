@@ -81,6 +81,14 @@
   html[data-theme="light"] .p-move.soon,html[data-theme="light"] .card-badge.cb-move.soon{background:#fff8c5;color:#9a6700;border-color:#f5e0a0}
   html[data-theme="light"] .p-move.late,html[data-theme="light"] .card-badge.cb-move.late{background:#ffebe9;color:#cf222e;border-color:#ffcecb}
 
+  /* Status heading rows filled with the status colour */
+  .band-hdr[class*=" c-"]{background:var(--c);height:30px;padding-left:14px;border-bottom:none}
+  .band-hdr[class*=" c-"] .band-acc{display:none}
+  .band-hdr[class*=" c-"] .band-name{color:#0d1117;font-size:10.5px;font-weight:700}
+  .band-hdr[class*=" c-"] .band-cnt{background:rgba(0,0,0,.2);color:#0d1117;font-weight:700}
+  html[data-theme="light"] .band-hdr[class*=" c-"] .band-name{color:#fff}
+  html[data-theme="light"] .band-hdr[class*=" c-"] .band-cnt{background:rgba(255,255,255,.25);color:#fff}
+
   /* PANELS */
   #panels{display:flex;flex:1;overflow:hidden}
   .pp{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
@@ -716,7 +724,7 @@ function renderBands(containerId,stages,props){
     const done=!!stage.done;
     rows.sort((a,b)=>done?calcDays(a.enteredStageAt)-calcDays(b.enteredStageAt):calcDays(b.enteredStageAt)-calcDays(a.enteredStageAt));
     html+=`<div class="band">
-      <div class="band-hdr">
+      <div class="band-hdr c-${colourKey(stage.colour)}">
         <div class="band-acc c-${colourKey(stage.colour)}"></div>
         <div class="band-name">${esc(stage.label)}</div>
         <div class="band-cnt">${rows.length}</div>
