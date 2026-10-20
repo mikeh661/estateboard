@@ -87,6 +87,25 @@
   .band-hdr[class*=" c-"] .band-name{color:var(--ct);font-weight:700;font-size:10.5px}
   .band-hdr[class*=" c-"] .band-cnt{background:var(--cbd);color:var(--ct);font-weight:700}
 
+  /* NEW highlight and "Just in" strip */
+  .card-badge.cb-new{background:#e41e29;color:#fff;border-color:#e41e29;letter-spacing:.08em}
+  .pr.is-new{background:linear-gradient(90deg,rgba(228,30,41,.16),rgba(228,30,41,0) 55%)}
+  .pr.is-new .p-addr{font-weight:600}
+  .pr.is-new .p-bar.none{background:#e41e29}
+  html[data-theme="light"] .pr.is-new{background:linear-gradient(90deg,rgba(228,30,41,.10),rgba(228,30,41,0) 55%)}
+  .new-tag{flex-shrink:0;margin-right:10px;font-size:9.5px;font-weight:800;letter-spacing:.08em;color:#fff;background:#e41e29;padding:2px 7px;border-radius:4px}
+  #new-strip{display:none;flex-shrink:0;align-items:center;height:34px;background:#e41e29;color:#fff;font-size:13px;font-weight:500;overflow:hidden;white-space:nowrap}
+  #new-strip.show{display:flex}
+  .ns-label{flex-shrink:0;height:100%;display:flex;align-items:center;padding:0 16px 0 20px;background:#c4141f;font-size:11px;font-weight:800;letter-spacing:.1em}
+  .ns-track{flex:1;overflow:hidden;height:100%;display:flex;align-items:center;-webkit-mask-image:linear-gradient(90deg,transparent,#000 24px,#000 calc(100% - 24px),transparent);mask-image:linear-gradient(90deg,transparent,#000 24px,#000 calc(100% - 24px),transparent)}
+  .ns-move{display:inline-flex;white-space:nowrap;will-change:transform;animation:ns-ticker var(--dur,30s) linear infinite}
+  .ns-half{display:inline-flex;align-items:center}
+  .ns-item b{font-weight:700}
+  .ns-msg{font-style:italic;opacity:.9}
+  .ns-sep{opacity:.6;margin:0 18px}
+  @keyframes ns-ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  @media (prefers-reduced-motion:reduce){.ns-move{animation-duration:calc(var(--dur,30s)*2)}}
+
   /* PANELS */
   #panels{display:flex;flex:1;overflow:hidden}
   .pp{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
@@ -293,6 +312,8 @@
       </div>
     </div>
   </div>
+
+  <div id="new-strip"><div class="ns-label">JUST IN</div><div class="ns-track"><div class="ns-move" id="ns-move"></div></div></div>
 
   <div id="panels">
     <div class="pp">
@@ -539,6 +560,18 @@ function moveInfo(p){
   const txt=d===0?'Move-in today':d===1?'Move-in tomorrow':d<0?'Move-in was '+dt:'Move-in '+dt;
   return{txt,cls:d<0?'late':d<=7?'soon':'',days:d};
 }
+// NEW highlight: a property counts as new until its newUntil date (inclusive)
+function addWorkingDays(from,n){
+  const d=parseYMD(from)||new Date();let left=Math.max(1,parseInt(n,10)||5);
+  while(left>0){d.setDate(d.getDate()+1);const w=d.getDay();if(w!==0&&w!==6)left--;}
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function isNew(p){
+  if(!p||p.archived||!p.newUntil)return false;
+  const t=new Date();const ts=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
+  return p.newUntil>=ts;
+}
+function newDays(){const n=parseInt(CUSTOM.newDays,10);return n>0&&n<=60?n:5;}
 /* ── END STATUSES & FLAGS ──────────────────────────────────────────────── */
 
 const NEG_COLOURS=[
@@ -659,6 +692,29 @@ async function onAuth(u){
   unsubs.push(sDoc().onSnapshot(snap=>{STORE.settings=snap.exists?(snap.data()||{}):{};renderSoon();},fail));
 }
 let _rs=null;
+// Scrolling "Just in" strip listing properties highlighted as NEW
+let _stripKey='';
+function renderNewStrip(){
+  const strip=document.getElementById('new-strip'),move=document.getElementById('ns-move');
+  const s=(DATA&&DATA.settings)||{};
+  const items=((DATA&&DATA.properties)||[]).filter(isNew);
+  const on=s.newStrip!==false&&items.length>0&&LOADED;
+  strip.classList.toggle('show',on);
+  if(!on){_stripKey='';move.innerHTML='';return;}
+  const parts=items.map(p=>`<span class="ns-item"><b>${esc(p.displayAddr)}</b> · ${p.pipeline==='sales'?'For sale':'To let'}${p.price?' · '+esc(p.price):''}</span>`);
+  const msg=String(s.newMessage==null?'Please prioritise viewings':s.newMessage).trim();
+  if(msg)parts.push(`<span class="ns-item ns-msg">${esc(msg)}</span>`);
+  const half=`<span class="ns-half">${parts.join('<span class="ns-sep">•</span>')}<span class="ns-sep">•</span></span>`;
+  const key=half;
+  if(key===_stripKey)return;           // unchanged: leave the animation running smoothly
+  _stripKey=key;
+  move.innerHTML=half+half;            // two copies so the loop is seamless
+  requestAnimationFrame(()=>{
+    const w=move.firstElementChild.getBoundingClientRect().width||800;
+    move.style.setProperty('--dur',Math.max(12,w/70)+'s');   // about 70 pixels a second
+    move.style.animation='none';void move.offsetWidth;move.style.animation='';
+  });
+}
 function renderFlagLegend(){
   const el=document.getElementById('flag-legend');if(!el)return;
   el.innerHTML=flagList().map(f=>`<div class="li"><div class="lb c-${colourKey(f.colour)}" style="background:var(--c)"></div>${esc(f.label)}</div>`).join('');
@@ -720,7 +776,8 @@ function renderBands(containerId,stages,props){
     if(!rows.length)return;
     // Completed: most recent first. Everything else: longest in stage first.
     const done=!!stage.done;
-    rows.sort((a,b)=>done?calcDays(a.enteredStageAt)-calcDays(b.enteredStageAt):calcDays(b.enteredStageAt)-calcDays(a.enteredStageAt));
+    // NEW properties first; then completed: most recent first, everything else: longest in stage first
+    rows.sort((a,b)=>(isNew(b)-isNew(a))||(done?calcDays(a.enteredStageAt)-calcDays(b.enteredStageAt):calcDays(b.enteredStageAt)-calcDays(a.enteredStageAt)));
     html+=`<div class="band">
       <div class="band-hdr c-${colourKey(stage.colour)}">
         <div class="band-acc c-${colourKey(stage.colour)}"></div>
@@ -734,10 +791,10 @@ function renderBands(containerId,stages,props){
       const mv=moveInfo(p);
       const n=negFor(p);
       const negStyle=n.bg?` style="background:${n.bg};color:${n.fg};border-color:transparent"`:'';
-      html+=`<div class="pr" onclick="openCard('${esc(p.id)}')">
+      html+=`<div class="pr${isNew(p)?' is-new':''}" onclick="openCard('${esc(p.id)}')">
         <div class="p-bar ${bar}"></div>
         <div class="p-neg"${negStyle} title="${esc(n.name)}">${esc(String(n.initials).substr(0,2))}</div>
-        <div class="p-addr" title="${esc(p.displayAddr)}">${esc(p.displayAddr)}</div>${mv?`<div class="p-move ${mv.cls}">${esc(mv.txt)}</div>`:''}
+        <div class="p-addr" title="${esc(p.displayAddr)}">${esc(p.displayAddr)}</div>${isNew(p)?'<div class="new-tag">NEW</div>':''}${mv?`<div class="p-move ${mv.cls}">${esc(mv.txt)}</div>`:''}
         <div class="p-price">${esc(p.price||'–')}</div>
         <div class="p-days ${di.cls}">${di.label}</div>
         <div class="p-prog">${makeDots(p.checklist)}</div>
@@ -756,6 +813,7 @@ function render(){
   const s=DATA.settings||{};
   setCustom(s);
   renderFlagLegend();
+  renderNewStrip();
   applyTheme(s);
   document.documentElement.classList.toggle('hide-neg',s.showNegotiators===false);
   const name=s.agencyName||'Castle Estates';
@@ -809,6 +867,7 @@ function openCard(id){
   document.getElementById('card-addr').textContent=p.displayAddr;
   const daysTxt=di.cls==='done'?'✓ Complete':di.days===0?'Entered stage today':di.days+'d in stage';
   document.getElementById('card-meta').innerHTML=`
+${isNew(p)?'<span class="card-badge cb-new">NEW</span>':''}
     <span class="card-badge ${isLet?'cb-let':'cb-sale'}">${isLet?'🏠 Lettings':'🏷 Sales'}</span>
     <span class="card-badge cb-stage c-${colourKey(stage.colour)}">${esc(stage.label)}</span>
     <span class="card-badge cb-price">${esc(p.price||'–')}</span>

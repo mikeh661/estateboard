@@ -88,6 +88,11 @@ table.pt tr.arc td{opacity:.5}
 .fp{background:var(--c,#9ca3af)}
 .badge[class*=" c-"]{background:var(--cbg);color:var(--ct);border-color:var(--cbd)}
 .fbtn.on{background:var(--cbg);color:var(--ct);border-color:var(--cbd)}
+.new-tag{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.08em;color:#fff;background:#e41e29;padding:2px 7px;border-radius:4px;line-height:1.4;vertical-align:middle}
+.new-tag.sm{font-size:9px;padding:1px 6px}
+.new-tog{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);margin-bottom:12px;cursor:pointer}
+.new-tog input{width:15px;height:15px;accent-color:#e41e29;cursor:pointer}
+.new-tog .hint{color:var(--text3);font-size:11px}
 .t-move{font-size:11px;font-weight:500;color:var(--text3);margin-top:2px}
 .t-move.soon{color:#9a6700}
 .t-move.late{color:#cf222e}
@@ -421,6 +426,19 @@ table.pt tr.arc td{opacity:.5}
       <div class="btns"><button class="btn btn-primary btn-sm" onclick="saveSettings()">Save</button></div>
     </div>
     <div class="set-card">
+      <h3>New properties</h3>
+      <p>Properties marked <span class="new-tag sm">NEW</span> go to the top of their section on the board with a red highlight. New properties are marked automatically; you can tick or untick it on any property.</p>
+      <div class="fg"><label class="fl">Highlight lasts <span class="hint">working days, Mon to Fri</span></label><input class="fi" id="set-newdays" type="number" min="1" max="60" step="1" style="max-width:120px"></div>
+      <div class="fg"><label class="fl">"Just in" strip across the board</label>
+        <div class="ptog" style="max-width:260px">
+          <button class="popt" id="ns-show" onclick="setNewStrip(true)">Show</button>
+          <button class="popt" id="ns-hide" onclick="setNewStrip(false)">Hide</button>
+        </div>
+      </div>
+      <div class="fg"><label class="fl">Message at the end of the strip <span class="hint">optional</span></label><input class="fi" id="set-newmsg" type="text" maxlength="120" placeholder="e.g. Please prioritise viewings"></div>
+      <div class="btns"><button class="btn btn-primary btn-sm" onclick="saveNewSettings()">Save</button></div>
+    </div>
+    <div class="set-card">
       <h3>Sales this year</h3>
       <p>Shown on the board as "sales this year" (1 April to 31 March). Enter the sales completed this year before the board went live. Every sale moved to <strong>Sold</strong> on the board is added on automatically, and the count starts again on 1 April.</p>
       <div class="fg"><label class="fl">Sales before the board went live <span class="hint" id="ytd-fy"></span></label><input class="fi" id="set-ytd" type="number" min="0" step="1" style="max-width:120px"></div>
@@ -525,6 +543,7 @@ table.pt tr.arc td{opacity:.5}
         </div>
         <div class="fsec">
           <div class="fsec-title">Flags</div>
+          <label class="new-tog" id="new-tog"><input type="checkbox" id="fa-new" onchange="updateNewHint()"><span class="new-tag">NEW</span><span>Highlight as new on the board</span><span class="hint" id="new-hint"></span></label>
           <div class="fopts" id="fa-flags"></div>
         </div>
         <div class="fsec" style="margin-bottom:0">
@@ -775,6 +794,18 @@ function moveInfo(p){
   const txt=d===0?'Move-in today':d===1?'Move-in tomorrow':d<0?'Move-in was '+dt:'Move-in '+dt;
   return{txt,cls:d<0?'late':d<=7?'soon':'',days:d};
 }
+// NEW highlight: a property counts as new until its newUntil date (inclusive)
+function addWorkingDays(from,n){
+  const d=parseYMD(from)||new Date();let left=Math.max(1,parseInt(n,10)||5);
+  while(left>0){d.setDate(d.getDate()+1);const w=d.getDay();if(w!==0&&w!==6)left--;}
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function isNew(p){
+  if(!p||p.archived||!p.newUntil)return false;
+  const t=new Date();const ts=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
+  return p.newUntil>=ts;
+}
+function newDays(){const n=parseInt(CUSTOM.newDays,10);return n>0&&n<=60?n:5;}
 /* ── END STATUSES & FLAGS ──────────────────────────────────────────────── */
 
 const COLOURS=[
@@ -1015,7 +1046,7 @@ function renderTable(props){
     const cs=compSummary(p);
     const compCell=cs.total?`<span class="cbadge ${cs.bad?'has-bad':cs.warn?'has-warn':'all-ok'}">${cs.ok+cs.warn}/${cs.total}</span>`:'<span class="muted">–</span>';
     return `<tr class="${p.archived?'arc':''}" onclick="openModal('${esc(p.id)}')">
-      <td><strong>${esc(p.displayAddr)}</strong>${p.archived?'<span class="arc-tag">Archived</span>':''}${mv&&!p.archived?`<div class="t-move ${mv.cls}">${esc(mv.txt)}</div>`:''}</td>
+      <td><strong>${esc(p.displayAddr)}</strong>${isNew(p)?' <span class="new-tag sm">NEW</span>':''}${p.archived?'<span class="arc-tag">Archived</span>':''}${mv&&!p.archived?`<div class="t-move ${mv.cls}">${esc(mv.txt)}</div>`:''}</td>
       <td><span class="badge ${p.pipeline==='lettings'?'bL':'bS'}">${p.pipeline==='lettings'?'Lettings':'Sales'}</span></td>
       <td><span class="badge ${p.archived?'b-arc':'c-'+colourKey((stageOf(p.pipeline,p.stage)||{}).colour)}">${esc(stageLabel(p.pipeline,p.stage))}</span></td>
       <td style="font-variant-numeric:tabular-nums">${esc(p.price||'–')}</td>
@@ -1084,7 +1115,7 @@ function populateNegDrop(selId){
 }
 
 /* ── PROPERTY MODAL ────────────────────────────────────────────────────── */
-let eId=null,openedAt=null,curPL='lettings',curFlags=[],curCL=Array(7).fill(false),curCompliance={};
+let curNewUntil='',eId=null,openedAt=null,curPL='lettings',curFlags=[],curCL=Array(7).fill(false),curCompliance={};
 
 function fmtStamp(ms){
   if(!ms)return'';
@@ -1110,6 +1141,8 @@ function openModal(id){
     document.getElementById('fa-boardnote').value=p.boardNote||'';
     curPL=p.pipeline||'lettings';
     curFlags=[...(p.flags||[])];
+    curNewUntil=isNew(p)?p.newUntil:'';
+    document.getElementById('fa-new').checked=isNew(p);
     curCL=[...(p.checklist||Array(7).fill(false))];
     curCompliance=p.compliance?JSON.parse(JSON.stringify(p.compliance)):{};
     stage=p.stage||'available';
@@ -1121,6 +1154,7 @@ function openModal(id){
     document.getElementById('fa-date').value=today();
     document.getElementById('fa-move').value='';
     curPL='lettings';curFlags=[];curCL=Array(7).fill(false);curCompliance={};
+    curNewUntil='';document.getElementById('fa-new').checked=true;
     document.getElementById('mtitle').textContent='Add Property';
     populateNegDrop('');
   }
@@ -1130,6 +1164,7 @@ function openModal(id){
   updateMoveField();
   renderCompliance();
   renderFlags();
+  updateNewHint();
   document.getElementById('mbg').classList.add('open');
   setTimeout(()=>document.getElementById('fa-addr').focus(),50);
 }
@@ -1179,6 +1214,12 @@ function renderFlags(){
     const on=curFlags.includes(f.key);
     return`<button class="fbtn${on?' on c-'+colourKey(f.colour):''}" onclick="togFlag('${esc(f.key)}')">${esc((f.icon||'⚑')+' '+f.label)}</button>`;
   }).join('')||'<span class="muted">No flags set up. Add some in Settings.</span>';
+}
+function updateNewHint(){
+  const on=document.getElementById('fa-new').checked;
+  const until=curNewUntil||addWorkingDays(today(),newDays());
+  const d=parseYMD(until);
+  document.getElementById('new-hint').textContent=on?'until '+d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'}):'';
 }
 function togFlag(f){curFlags=curFlags.includes(f)?curFlags.filter(x=>x!==f):[...curFlags,f];renderFlags();}
 
@@ -1246,6 +1287,7 @@ function saveProp(){
     notes:document.getElementById('fa-notes').value.trim(),
     boardNote:document.getElementById('fa-boardnote').value.trim(),
     flags:[...curFlags],checklist:[...curCL],compliance,
+    newUntil:document.getElementById('fa-new').checked?(curNewUntil||addWorkingDays(today(),newDays())):'',
     moveDate:curPL==='lettings'?(document.getElementById('fa-move').value||''):'',
     ...stamp()
   };
@@ -1426,6 +1468,7 @@ function renderSettings(){
   const yt=ytdSales(d);
   document.getElementById('set-ytd').value=yt.base;
   renderSettingsMeta();
+  renderNewSettings(true);
 }
 // Parts of the settings page that can refresh without touching what someone is typing
 function renderSettingsMeta(){
@@ -1434,6 +1477,7 @@ function renderSettingsMeta(){
   if(!ED_DIRTY)renderLists();
   renderNegColToggle(d.settings.showNegotiators!==false);
   renderYtdMeta();
+  renderNewSettings(false);
   document.getElementById('set-lastexp').textContent=d.settings.lastExport?fmtDate(d.settings.lastExport):'never';
   document.getElementById('btn-demo').disabled=d.properties.length>0||d.negotiators.length>0;
   document.querySelectorAll('.owner-only').forEach(el=>{if(el.id!=='card-local')el.style.display=isOwner()?'':'none';});
@@ -1445,6 +1489,25 @@ function renderYtdMeta(){
   const yt=ytdSales(getData());
   document.getElementById('ytd-fy').textContent='since '+yt.fy.split('-').reverse().join('/');
   document.getElementById('ytd-meta').innerHTML=`Board shows <strong>${yt.total}</strong>: ${yt.base} entered here + ${yt.onBoard} marked Sold on the board.`;
+}
+function renderNewSettings(full){
+  const st=getData().settings;
+  const on=st.newStrip!==false;
+  document.getElementById('ns-show').className='popt'+(on?' aL':'');
+  document.getElementById('ns-hide').className='popt'+(!on?' aL':'');
+  if(full){
+    document.getElementById('set-newdays').value=newDays();
+    document.getElementById('set-newmsg').value=st.newMessage==null?'Please prioritise viewings':st.newMessage;
+  }
+}
+function setNewStrip(on){
+  document.getElementById('ns-show').className='popt'+(on?' aL':'');
+  document.getElementById('ns-hide').className='popt'+(!on?' aL':'');
+  commit(sDoc().set({newStrip:on},{merge:true}),on?'"Just in" strip shown ✓':'"Just in" strip hidden ✓');
+}
+function saveNewSettings(){
+  const n=Math.min(60,Math.max(1,parseInt(document.getElementById('set-newdays').value,10)||5));
+  commit(sDoc().set({newDays:n,newMessage:document.getElementById('set-newmsg').value.trim()},{merge:true}),'New property settings saved ✓');
 }
 function saveYtd(){
   const v=Math.max(0,parseInt(document.getElementById('set-ytd').value,10)||0);
