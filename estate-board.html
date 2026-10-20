@@ -322,14 +322,14 @@
   html[data-theme="light"] .dot.off,html[data-theme="light"] .cdot.na,html[data-theme="light"] .comp-row-dot.na{background:#c3cad2}
 
   /* Line map: each row shows where it is in the pipeline */
-  .cl-addr{flex:0 1 247px;min-width:0}
-  .p-addrw{flex:0 1 250px;min-width:0;display:flex;align-items:center;margin-right:10px}
+  .cl-addr{flex:0 1 217px;min-width:0}
+  .p-addrw{flex:0 1 220px;min-width:0;display:flex;align-items:center;margin-right:10px}
   .p-addrw .p-addr{margin-right:0}
   .cl-line{flex:1 0 160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0 14px 0 6px;padding-left:6px}
   .cl-line span{width:0;display:flex;justify-content:center;white-space:nowrap}
   .p-line{flex:1 0 160px;position:relative;height:30px;margin:0 14px 0 6px;display:flex;justify-content:space-between;align-items:center;padding:0 20px}
-  .p-line::before{content:"";position:absolute;left:24px;right:24px;top:14px;height:2px;background:var(--border)}
-  .p-line::after{content:"";position:absolute;left:24px;top:13px;height:4px;border-radius:2px;width:calc((100% - 48px) * var(--k));background:var(--c)}
+  .p-line::before{content:"";position:absolute;left:20px;right:20px;top:14px;height:2px;background:var(--border)}
+  .p-line::after{content:"";position:absolute;left:20px;top:13px;height:4px;border-radius:0;width:calc(5.5px + (100% - 45.5px) * var(--k));background:var(--c)}
   .ln-st{position:relative;z-index:1;width:8px;height:8px;border-radius:50%;background:var(--bg);border:2px solid var(--border);flex-shrink:0}
   .ln-st.past{background:var(--c);border-color:var(--c)}
   .ln-here{position:relative;z-index:2;width:0;display:flex;justify-content:center}
@@ -342,6 +342,39 @@
   @media (max-width:1700px){.p-addrw{flex-basis:190px}.cl-addr{flex-basis:187px}.cl-flag,.p-flag{width:120px}}
   @media (max-width:1500px){.cl-flag,.p-flag{width:96px}.p-line,.cl-line{margin-right:8px}}
   .pr:hover .ln-here b,.pr.is-new .ln-here b{box-shadow:0 0 0 3px var(--surface)}
+
+  /* Castle stations on the line */
+  .ln-st{width:11px!important;height:17px!important;margin-top:-6px;border:none!important;border-radius:0!important;background:var(--border)!important;-webkit-mask:var(--rook) center/contain no-repeat;mask:var(--rook) center/contain no-repeat}
+  .ln-st.past{background:var(--c)!important}
+  .p-line::before{top:20px!important;height:2px!important}
+  .p-line::after{top:19px!important;height:4px!important}
+  .ln-st:not(.past){background:#4a525d!important}
+  html[data-theme="light"] .ln-st:not(.past){background:#b4bcc6!important}
+  html[data-theme="light"] .ln-st.past{background:var(--c)!important}
+  .ln-here b{min-width:34px;padding:0 6px;white-space:nowrap}
+  .ln-here b i{width:7px;height:11px;background:currentColor;-webkit-mask:var(--rook) center/contain no-repeat;mask:var(--rook) center/contain no-repeat;flex-shrink:0}
+  .ln-here.done b i{display:none}
+  /* Compliance icons: red tile = missing, green = done, faint = not due yet / N/A */
+  .p-comp,.cl-comp{width:140px}
+  .p-comp{gap:3px}
+  .ci{width:20px;height:20px;border-radius:5px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .ci svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .ci.ok{color:#3fb950}
+  .ci.warn{color:#1b1500;background:#d29922}
+  .ci.bad{color:#fff;background:#e5484d;box-shadow:0 0 0 1px rgba(255,255,255,.08)}
+  .ci.na{color:#3d444d}
+  html[data-theme="light"] .ci.ok{color:#1a7f37}
+  html[data-theme="light"] .ci.bad{background:#cf222e}
+  html[data-theme="light"] .ci.na{color:#c3cad2}
+  .ci.fill{animation:cipop .6s cubic-bezier(.2,.8,.2,1) both}
+  @keyframes cipop{0%{transform:scale(1.5);background:#3fb950;color:#fff}100%{transform:none}}
+  .ci-sm{width:16px;height:16px;border-radius:4px}
+  .ci-sm svg{width:11px;height:11px}
+  .ikey{display:flex;align-items:center;gap:10px}
+  .ikey .li{gap:4px}
+  .ikey .ci{width:16px;height:16px;border-radius:4px;color:var(--muted);background:var(--border2)}
+  .ikey .ci svg{width:11px;height:11px}
+  .comp-row-item .ci{width:22px;height:22px}
 </style>
 </head>
 <body>
@@ -409,10 +442,9 @@
     </div>
     <div class="legend">
       <span>Compliance:</span>
-      <div class="li"><div class="cdot ok"></div>Done</div>
-      
-      <div class="li"><div class="cdot bad"></div>Missing</div>
-      <div class="li"><div class="cdot na"></div>Not yet due / N/A</div>
+      <div class="li"><div class="ci bad ci-sm"><svg viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></svg></div>Missing</div>
+      <div class="li"><div class="ci ok ci-sm"><svg viewBox="0 0 16 16"><path d="m3.5 8.3 3 3 6-6.6"/></svg></div>Done</div>
+      <div class="ikey" id="icon-key"></div>
     </div>
     <div>Days in stage &nbsp;·&nbsp; <span style="color:var(--yellow)">amber 14d+</span> &nbsp;·&nbsp; <span style="color:var(--red)">red 28d+</span></div>
     <div class="foot-r"><span id="last-upd">–</span><span id="foot-who"></span><button class="foot-link" onclick="signOutBoard()">Sign out</button></div>
@@ -474,9 +506,6 @@ const COMP={
     {key:'alarms',  label:'Smoke & CO alarms checked',     expiry:false,na:false,from:'available'},
     {key:'licence', label:'Property licence',              expiry:false,na:true, from:'available'},
     {key:'contract',label:'Landlord terms signed',         expiry:false,na:false,from:'available'},
-    {key:'rtr',     label:'Right to Rent check',           expiry:false,na:false,from:'referencing'},
-    {key:'htr',     label:'How to Rent guide served',      expiry:false,na:false,from:'move_pending'},
-    {key:'deposit', label:'Deposit protected & PI served', expiry:false,na:true, from:'let'},
   ],
   sales:[
     {key:'contract',  label:'Vendor terms signed',  expiry:false,na:false,from:'available'},
@@ -836,7 +865,7 @@ function nextCeleb(){
 }
 
 function renderFlagLegend(){
-  const el=document.getElementById('flag-legend');if(!el)return;
+  {const k=document.getElementById('icon-key');if(k)k.innerHTML=iconKey();}const el=document.getElementById('flag-legend');if(!el)return;
   el.innerHTML=flagList().map(f=>`<div class="li"><div class="lb c-${colourKey(f.colour)}" style="background:var(--c)"></div>${esc(f.label)}</div>`).join('');
 }
 function renderSoon(){if(_rs)return;_rs=setTimeout(()=>{_rs=null;render();},0);}
@@ -882,13 +911,30 @@ function makeDots(cl,fills){
   return c.map((v,i)=>`<div class="dot ${v?'on':i===cur?'cur':'off'}${v?fillAttr(fills,i):''}"></div>`).join('');
 }
 
+const CI={
+  gas:'<path d="M8 1.6c.6 2.6 3.7 4 3.7 7.6a3.7 3.7 0 0 1-7.4 0c0-1.7.8-2.7 1.7-3.4.1 1.2.6 2.1 1.4 2.4C7.6 6.1 7 3.9 8 1.6z"/>',
+  epc:'<path d="M2.5 4h5M2.5 8h8M2.5 12h11" stroke-width="2.4"/>',
+  eicr:'<path d="M9.2 1.5 3.6 9h4.2l-1 5.5L12.4 7H8.2z"/>',
+  alarms:'<path d="M4 11.2V7.3a4 4 0 0 1 8 0v3.9l1.2 1.3H2.8z"/><path d="M6.6 14.3h2.8"/>',
+  licence:'<path d="M8 1.6 13.4 3.6v3.8c0 3.4-2.4 5.7-5.4 7-3-1.3-5.4-3.6-5.4-7V3.6z"/><path d="m5.7 8 1.6 1.6L10.5 6.4"/>',
+  contract:'<path d="M10.6 2.3l3.1 3.1L6.1 13H3v-3.1z"/><path d="M9 4l3 3"/>',
+  aml_seller:'<rect x="1.6" y="3.4" width="12.8" height="9.2" rx="1.6"/><circle cx="5.4" cy="7.2" r="1.5"/><path d="M3.5 10.6c.4-.9 1.1-1.4 1.9-1.4s1.5.5 1.9 1.4M9.2 6.6h3.2M9.2 9.2h3.2"/>',
+  aml_buyer:'<circle cx="8" cy="5" r="2.6"/><path d="M2.8 14.2c.7-2.8 2.8-4.3 5.2-4.3s4.5 1.5 5.2 4.3"/>'
+};
+const CI_SHORT={gas:'Gas',epc:'EPC',eicr:'EICR',alarms:'Alarms',licence:'Licence',contract:'Terms',aml_seller:'Seller ID',aml_buyer:'Buyer ID'};
+function compIcon(key){return`<svg viewBox="0 0 16 16">${CI[key]||'<circle cx="8" cy="8" r="4"/>'}</svg>`;}
+function iconKey(){
+  const seen={};const items=[];
+  ['lettings','sales'].forEach(pl=>(COMP[pl]||[]).forEach(d=>{if(!seen[d.key]){seen[d.key]=1;items.push(d);}}));
+  return items.map(d=>`<div class="li"><div class="ci">${compIcon(d.key)}</div>${esc(CI_SHORT[d.key]||d.label)}</div>`).join('');
+}
 function makeCompDots(p){
   const comp=p.compliance||{},fills=ANIM.comp[p.id];
   return (COMP[p.pipeline]||[]).map((def,i)=>{
     const it=normItem(comp[def.key]);
     const st=compStatus(def,it,p.pipeline,p.stage);
     const tip=def.label+': '+COMP_LABEL[st]+(def.expiry&&it.expiry&&it.status==='done'?` (exp ${fmtDate(it.expiry)})`:'');
-    return`<div class="cdot ${COMP_TONE[st]}${COMP_TONE[st]==='ok'?fillAttr(fills,i):''}" title="${esc(tip)}"></div>`;
+    return`<div class="ci ${COMP_TONE[st]}${COMP_TONE[st]==='ok'?fillAttr(fills,i):''}" title="${esc(tip)}">${compIcon(def.key)}</div>`;
   }).join('');
 }
 
@@ -1056,7 +1102,7 @@ ${isNew(p)?'<span class="card-badge cb-new">NEW</span>':''}
     if(tone!=='na'){total++;if(tone!=='bad')ok++;}
     const exp=def.expiry&&it.status==='done'&&it.expiry?`<span class="comp-row-expiry">Exp ${fmtDate(it.expiry)}</span>`:'';
     return`<div class="comp-row-item ${tone==='na'?'na':''}">
-      <div class="comp-row-dot ${tone}"></div>
+      <div class="ci ${tone}">${compIcon(def.key)}</div>
       <span class="comp-row-label">${esc(def.label)}</span>
       ${exp}
       <span class="comp-row-status ${tone}">${COMP_LABEL[st]}</span>
