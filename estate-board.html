@@ -320,6 +320,28 @@
   .p-comp{gap:3px}
   .dot.off,.cdot.na,.comp-row-dot.na{background:#3d444d}
   html[data-theme="light"] .dot.off,html[data-theme="light"] .cdot.na,html[data-theme="light"] .comp-row-dot.na{background:#c3cad2}
+
+  /* Line map: each row shows where it is in the pipeline */
+  .cl-addr{flex:0 1 247px;min-width:0}
+  .p-addrw{flex:0 1 250px;min-width:0;display:flex;align-items:center;margin-right:10px}
+  .p-addrw .p-addr{margin-right:0}
+  .cl-line{flex:1 0 160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0 14px 0 6px;padding-left:6px}
+  .cl-line span{width:0;display:flex;justify-content:center;white-space:nowrap}
+  .p-line{flex:1 0 160px;position:relative;height:30px;margin:0 14px 0 6px;display:flex;justify-content:space-between;align-items:center;padding:0 20px}
+  .p-line::before{content:"";position:absolute;left:24px;right:24px;top:14px;height:2px;background:var(--border)}
+  .p-line::after{content:"";position:absolute;left:24px;top:13px;height:4px;border-radius:2px;width:calc((100% - 48px) * var(--k));background:var(--c)}
+  .ln-st{position:relative;z-index:1;width:8px;height:8px;border-radius:50%;background:var(--bg);border:2px solid var(--border);flex-shrink:0}
+  .ln-st.past{background:var(--c);border-color:var(--c)}
+  .ln-here{position:relative;z-index:2;width:0;display:flex;justify-content:center}
+  .ln-here b{min-width:32px;height:20px;padding:0 6px;border-radius:10px;background:var(--bg);border:2px solid var(--c);color:var(--text);font-size:10.5px;font-weight:700;display:flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums;box-shadow:0 0 0 3px var(--bg)}
+  .ln-here.warn b{background:#d29922;border-color:#d29922;color:#1b1500}
+  .ln-here.danger b{background:#f85149;border-color:#f85149;color:#fff}
+  html[data-theme="light"] .ln-here.warn b{background:#bf8700;border-color:#bf8700;color:#fff}
+  html[data-theme="light"] .ln-here.danger b{background:#cf222e;border-color:#cf222e}
+  .ln-here.done b{background:var(--c);color:#fff}
+  @media (max-width:1700px){.p-addrw{flex-basis:190px}.cl-addr{flex-basis:187px}.cl-flag,.p-flag{width:120px}}
+  @media (max-width:1500px){.cl-flag,.p-flag{width:96px}.p-line,.cl-line{margin-right:8px}}
+  .pr:hover .ln-here b,.pr.is-new .ln-here b{box-shadow:0 0 0 3px var(--surface)}
 </style>
 </head>
 <body>
@@ -355,8 +377,7 @@
         <div class="cl cl-addr">Address</div>
         <div class="cl cl-beds">Beds</div>
         <div class="cl cl-price">Rent/mo</div>
-        <div class="cl cl-days">Days</div>
-        <div class="cl cl-prog">Progress</div>
+        <div class="cl cl-line">Progress · days in status</div>
         <div class="cl cl-comp">Compliance</div>
         <div class="cl cl-flag">Flag</div>
       </div>
@@ -374,8 +395,7 @@
         <div class="cl cl-addr">Address</div>
         <div class="cl cl-beds">Beds</div>
         <div class="cl cl-price">Asking</div>
-        <div class="cl cl-days">Days</div>
-        <div class="cl cl-prog">Progress</div>
+        <div class="cl cl-line">Progress · days in status</div>
         <div class="cl cl-comp">Compliance</div>
         <div class="cl cl-flag">Flag</div>
       </div>
@@ -840,6 +860,13 @@ function negFor(p){
   return{name:p.negotiatorName||'Unassigned',initials:p.negotiatorInitials||'?',bg:null,fg:null};
 }
 
+function makeLine(p,di,stage){
+  const st=stagesFor(p.pipeline);const i=Math.max(0,stageIdx(p.pipeline,p.stage));const n=st.length;
+  const k=n>1?i/(n-1):0;
+  const parts=st.map((s,j)=>j===i?`<div class="ln-here ${di.cls}"><b>${di.label}</b></div>`:`<div class="ln-st${j<i?' past':''}" title="${esc(s.label)}"></div>`).join('');
+  return `<div class="p-line c-${colourKey(stage.colour)}" style="--k:${k}">${parts}</div>`;
+}
+function lineHeads(pl){return stagesFor(pl).map(s=>`<span>${esc((s.short||s.label).split(/ \/ | in /)[0])}</span>`).join('');}
 function dayInfo(p){
   if(isComplete(p))return{label:'✓',cls:'done'};
   const d=calcDays(p.enteredStageAt);
@@ -899,11 +926,10 @@ function renderBands(containerId,stages,props){
       html+=`<div class="pr${isNew(p)?' is-new':''}${an}" onclick="openCard('${esc(p.id)}')">
         <div class="p-bar ${bar}"></div>
         <div class="p-neg"${negStyle} title="${esc(n.name)}">${esc(String(n.initials).substr(0,2))}</div>
-        <div class="p-addr" title="${esc(p.displayAddr)}">${esc(p.displayAddr)}</div>${isNew(p)?'<div class="new-tag">NEW</div>':''}${mv?`<div class="p-move ${mv.cls}">${esc(mv.txt)}</div>`:''}
+        <div class="p-addrw"><div class="p-addr" title="${esc(p.displayAddr)}">${esc(p.displayAddr)}</div>${isNew(p)?'<div class="new-tag">NEW</div>':''}${mv?`<div class="p-move ${mv.cls}">${esc(mv.txt)}</div>`:''}</div>
         <div class="p-beds">${bedsLabel(p)}</div>
         <div class="p-price">${esc(p.price||'–')}</div>
-        <div class="p-days ${di.cls}">${di.label}</div>
-        <div class="p-prog">${makeDots(p.checklist,ANIM.prog[p.id])}</div>
+        ${makeLine(p,di,stage)}
         <div class="p-comp">${makeCompDots(p)}</div>
         ${flagCell(p.flags)}
       </div>`;
