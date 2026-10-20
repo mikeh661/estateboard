@@ -326,9 +326,9 @@
   .cl-addr{flex:1 1 auto;min-width:0}
   .p-addrw{flex:1 1 auto;min-width:0;display:flex;align-items:center;margin-right:10px}
   .p-addrw .p-addr{margin-right:0}
-  .cl-line{flex:0 1 210px;min-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0 14px 0 6px;padding-left:6px}
+  .cl-line{flex:0 1 calc(var(--n,6) * 41px + 30px);min-width:calc(var(--n,6) * 34px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0 14px 0 6px;padding-left:6px}
   .cl-line span{width:0;display:flex;justify-content:center;white-space:nowrap}
-  .p-line{flex:0 1 210px;min-width:160px;position:relative;height:30px;margin:0 14px 0 6px;display:flex;justify-content:space-between;align-items:center;padding:0 20px}
+  .p-line{flex:0 1 calc(var(--n,6) * 41px + 30px);min-width:calc(var(--n,6) * 34px);position:relative;height:30px;margin:0 14px 0 6px;display:flex;justify-content:space-between;align-items:center;padding:0 20px}
   .p-line::before{content:"";position:absolute;left:20px;right:20px;top:14px;height:2px;background:var(--border)}
   .p-line::after{content:"";position:absolute;left:20px;top:13px;height:4px;border-radius:0;width:calc(5.5px + (100% - 45.5px) * var(--k));background:var(--c)}
   .ln-st{position:relative;z-index:1;width:8px;height:8px;border-radius:50%;background:var(--bg);border:2px solid var(--border);flex-shrink:0}
@@ -946,6 +946,7 @@ function flagCell(flags){
 }
 
 function renderBands(containerId,stages,props){
+  {const bw=document.getElementById(containerId);const pp=bw&&bw.closest('.pp');if(pp)pp.style.setProperty('--n',stages.length);}
   const el=document.getElementById(containerId);
   let html='';
   stages.forEach(stage=>{
