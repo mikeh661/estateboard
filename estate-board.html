@@ -96,14 +96,14 @@
   .new-tag{flex-shrink:0;margin-right:10px;font-size:9.5px;font-weight:800;letter-spacing:.08em;color:#fff;background:#e41e29;padding:2px 7px;border-radius:4px}
   #new-strip{display:none;flex-shrink:0;align-items:center;height:34px;background:#e41e29;color:#fff;font-size:13px;font-weight:500;overflow:hidden;white-space:nowrap}
   #new-strip.show{display:flex}
-  .ns-label{flex-shrink:0;height:100%;display:flex;align-items:center;padding:0 16px 0 20px;background:#c4141f;font-size:11px;font-weight:800;letter-spacing:.1em}
-  .ns-track{flex:1;overflow:hidden;height:100%;display:flex;align-items:center;-webkit-mask-image:linear-gradient(90deg,transparent,#000 24px,#000 calc(100% - 24px),transparent);mask-image:linear-gradient(90deg,transparent,#000 24px,#000 calc(100% - 24px),transparent)}
-  .ns-move{display:inline-flex;white-space:nowrap;will-change:transform;animation:ns-ticker var(--dur,30s) linear infinite}
+  .ns-badge{display:inline-block;background:#fff;color:#e41e29;font-size:11px;font-weight:800;letter-spacing:.1em;padding:2px 9px;border-radius:4px;margin-right:16px}
+  .ns-track{flex:1;overflow:hidden;height:100%;display:flex;align-items:center;position:relative}
+  .ns-move{position:absolute;left:0;top:50%;display:inline-flex;align-items:center;white-space:nowrap;will-change:transform;transform:translate(var(--from,100vw),-50%);animation:ns-ticker var(--dur,30s) linear infinite}
   .ns-half{display:inline-flex;align-items:center}
   .ns-item b{font-weight:700}
   .ns-msg{font-style:italic;opacity:.9}
   .ns-sep{opacity:.6;margin:0 18px}
-  @keyframes ns-ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  @keyframes ns-ticker{from{transform:translate(var(--from,100vw),-50%)}to{transform:translate(var(--to,-100%),-50%)}}
   @media (prefers-reduced-motion:reduce){.ns-move{animation-duration:calc(var(--dur,30s)*2)}}
 
   /* PANELS */
@@ -121,6 +121,8 @@
   .cl-bar{width:3px;flex-shrink:0;margin-right:9px}
   .cl-neg{width:24px;flex-shrink:0;margin-right:9px;text-align:center}
   .cl-addr{flex:1;margin-right:10px}
+  .cl-beds,.p-beds{width:38px;flex-shrink:0;margin-right:10px;text-align:center}
+  .p-beds{font-size:11px;color:var(--text);font-variant-numeric:tabular-nums}
   .cl-price{width:62px;flex-shrink:0;margin-right:10px;text-align:right}
   .cl-days{width:34px;flex-shrink:0;margin-right:10px;text-align:right}
   .cl-prog{width:70px;flex-shrink:0;margin-right:10px;text-align:left}
@@ -313,7 +315,7 @@
     </div>
   </div>
 
-  <div id="new-strip"><div class="ns-label">JUST IN</div><div class="ns-track"><div class="ns-move" id="ns-move"></div></div></div>
+  <div id="new-strip"><div class="ns-track"><div class="ns-move" id="ns-move"></div></div></div>
 
   <div id="panels">
     <div class="pp">
@@ -325,6 +327,7 @@
         <div class="cl-bar"></div>
         <div class="cl cl-neg">Neg</div>
         <div class="cl cl-addr">Address</div>
+        <div class="cl cl-beds">Beds</div>
         <div class="cl cl-price">Rent/mo</div>
         <div class="cl cl-days">Days</div>
         <div class="cl cl-prog">Progress</div>
@@ -343,6 +346,7 @@
         <div class="cl-bar"></div>
         <div class="cl cl-neg">Neg</div>
         <div class="cl cl-addr">Address</div>
+        <div class="cl cl-beds">Beds</div>
         <div class="cl cl-price">Asking</div>
         <div class="cl cl-days">Days</div>
         <div class="cl cl-prog">Progress</div>
@@ -572,6 +576,12 @@ function isNew(p){
   return p.newUntil>=ts;
 }
 function newDays(){const n=parseInt(CUSTOM.newDays,10);return n>0&&n<=60?n:5;}
+// Bedrooms: the beds field, or "3 bed" in the board note for properties imported from the whiteboard
+function bedsOf(p){
+  if(p&&p.beds!==undefined&&p.beds!==null&&p.beds!=='')return Number(p.beds);
+  const m=/(\d+)\s*bed/i.exec((p&&p.boardNote)||'');return m?Number(m[1]):null;
+}
+function bedsLabel(p){const b=bedsOf(p);return b===null||isNaN(b)?'–':b===0?'Studio':String(b);}
 /* ── END STATUSES & FLAGS ──────────────────────────────────────────────── */
 
 const NEG_COLOURS=[
@@ -704,17 +714,24 @@ function renderNewStrip(){
   const parts=items.map(p=>`<span class="ns-item"><b>${esc(p.displayAddr)}</b> · ${p.pipeline==='sales'?'For sale':'To let'}${p.price?' · '+esc(p.price):''}</span>`);
   const msg=String(s.newMessage==null?'Please prioritise viewings':s.newMessage).trim();
   if(msg)parts.push(`<span class="ns-item ns-msg">${esc(msg)}</span>`);
-  const half=`<span class="ns-half">${parts.join('<span class="ns-sep">•</span>')}<span class="ns-sep">•</span></span>`;
-  const key=half;
-  if(key===_stripKey)return;           // unchanged: leave the animation running smoothly
-  _stripKey=key;
-  move.innerHTML=half+half;            // two copies so the loop is seamless
-  requestAnimationFrame(()=>{
-    const w=move.firstElementChild.getBoundingClientRect().width||800;
-    move.style.setProperty('--dur',Math.max(12,w/70)+'s');   // about 70 pixels a second
-    move.style.animation='none';void move.offsetWidth;move.style.animation='';
-  });
+  const html=`<span class="ns-badge">JUST IN</span>${parts.join('<span class="ns-sep">•</span>')}`;
+  if(html===_stripKey)return;          // unchanged: leave the animation running smoothly
+  _stripKey=html;
+  move.innerHTML=html;
+  requestAnimationFrame(sizeStrip);
 }
+// The text enters at the right-hand edge of the screen and travels until it has left the left-hand edge
+function sizeStrip(){
+  const move=document.getElementById('ns-move'),track=move&&move.parentNode;
+  if(!move||!move.innerHTML)return;
+  const tw=track.getBoundingClientRect().width||window.innerWidth;
+  const cw=move.getBoundingClientRect().width||800;
+  move.style.setProperty('--from',tw+'px');
+  move.style.setProperty('--to',(-cw)+'px');
+  move.style.setProperty('--dur',Math.max(10,(tw+cw)/90)+'s');   // about 90 pixels a second
+  move.style.animation='none';void move.offsetWidth;move.style.animation='';
+}
+window.addEventListener('resize',()=>{if(document.getElementById('new-strip').classList.contains('show'))sizeStrip();});
 function renderFlagLegend(){
   const el=document.getElementById('flag-legend');if(!el)return;
   el.innerHTML=flagList().map(f=>`<div class="li"><div class="lb c-${colourKey(f.colour)}" style="background:var(--c)"></div>${esc(f.label)}</div>`).join('');
@@ -795,6 +812,7 @@ function renderBands(containerId,stages,props){
         <div class="p-bar ${bar}"></div>
         <div class="p-neg"${negStyle} title="${esc(n.name)}">${esc(String(n.initials).substr(0,2))}</div>
         <div class="p-addr" title="${esc(p.displayAddr)}">${esc(p.displayAddr)}</div>${isNew(p)?'<div class="new-tag">NEW</div>':''}${mv?`<div class="p-move ${mv.cls}">${esc(mv.txt)}</div>`:''}
+        <div class="p-beds">${bedsLabel(p)}</div>
         <div class="p-price">${esc(p.price||'–')}</div>
         <div class="p-days ${di.cls}">${di.label}</div>
         <div class="p-prog">${makeDots(p.checklist)}</div>
@@ -870,7 +888,7 @@ function openCard(id){
 ${isNew(p)?'<span class="card-badge cb-new">NEW</span>':''}
     <span class="card-badge ${isLet?'cb-let':'cb-sale'}">${isLet?'🏠 Lettings':'🏷 Sales'}</span>
     <span class="card-badge cb-stage c-${colourKey(stage.colour)}">${esc(stage.label)}</span>
-    <span class="card-badge cb-price">${esc(p.price||'–')}</span>
+    <span class="card-badge cb-price">${esc(p.price||'–')}</span>${bedsOf(p)!==null?`<span class="card-badge cb-price">${bedsOf(p)===0?'Studio':bedsOf(p)+' bed'}</span>`:''}
     <span class="card-badge cb-days ${di.cls}">${daysTxt}</span>${mv?`<span class="card-badge cb-move ${mv.cls}">${esc(mv.txt)}</span>`:''}`;
 
   const n=negFor(p);
