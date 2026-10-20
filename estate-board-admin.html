@@ -85,9 +85,12 @@ table.pt tr.arc td{opacity:.5}
 .nn{color:var(--text2);font-size:12px}
 .fc{display:flex;gap:4px}
 .fp{width:8px;height:8px;border-radius:50%}
-.fp.urgent,.fp.blocked{background:#dc2626}
-.fp.await{background:#2563eb}
-.fp.delayed{background:#d97706}
+.fp{background:var(--c,#9ca3af)}
+.badge[class*=" c-"]{background:var(--cbg);color:var(--ct);border-color:var(--cbd)}
+.fbtn.on{background:var(--cbg);color:var(--ct);border-color:var(--cbd)}
+.t-move{font-size:11px;font-weight:500;color:var(--text3);margin-top:2px}
+.t-move.soon{color:#9a6700}
+.t-move.late{color:#cf222e}
 .pc{display:flex;align-items:center;gap:6px}
 .pb{width:44px;height:5px;background:#e5e7eb;border-radius:3px;overflow:hidden}
 .pbf{height:100%;background:#15803d;border-radius:3px}
@@ -129,6 +132,18 @@ table.pt tr.arc td{opacity:.5}
 .set-card .btns{display:flex;gap:8px;flex-wrap:wrap}
 .set-meta{font-size:12px;color:var(--text3);margin-bottom:12px}
 .set-meta strong{color:var(--text)}
+.ed-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.ed-grid h4{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+.ed-row{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.ed-col{width:92px;flex-shrink:0;padding:6px 6px 6px 10px;border:1px solid var(--border2);border-left:6px solid var(--c);border-radius:6px;font:inherit;font-size:12px;background:var(--surface);color:var(--text)}
+.ed-lbl{flex:1;min-width:0;padding:6px 8px!important;font-size:12px!important}
+.ed-btn{width:26px;height:28px;flex-shrink:0;border:1px solid var(--border2);background:var(--surface);border-radius:6px;cursor:pointer;font-size:11px;color:var(--text2)}
+.ed-btn:hover{background:var(--bg)}
+.ed-btn:disabled{opacity:.35;cursor:default}
+.ed-x:hover{color:var(--danger);border-color:#fca5a5}
+.ed-chk{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2);white-space:nowrap;flex-shrink:0;cursor:pointer}
+.ed-dirty{font-size:12px;color:var(--warning);font-weight:500}
+@media (max-width:1100px){.ed-grid{grid-template-columns:1fr}}
 .team-tbl{width:100%;border-collapse:collapse;font-size:13px}
 .team-tbl th{text-align:left;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;padding:8px 10px;border-bottom:1px solid var(--border)}
 .team-tbl td{padding:10px;border-bottom:1px solid var(--border);vertical-align:middle}
@@ -427,6 +442,21 @@ table.pt tr.arc td{opacity:.5}
       <p id="local-txt">This browser still holds data from the old, single-PC version.</p>
       <div class="btns"><button class="btn btn-primary btn-sm" onclick="uploadLocal()">Move it to the shared board</button></div>
     </div>
+    <div class="set-card wide owner-only" id="card-lists">
+      <h3>Statuses &amp; flags</h3>
+      <p>Set up the statuses each pipeline moves through and the flags staff can put on a property. Rename, recolour or reorder them freely; properties keep their place. Tick <strong>Completed</strong> on the final status (e.g. Let, Sold) so the board shows a ✓ and sales count towards "sales this year". Flags at the top of the list take priority on the board. Tick <strong>Flash</strong> to make a flag's bar pulse.</p>
+      <div class="ed-grid">
+        <div><h4>Lettings statuses</h4><div id="ed-lettings"></div><button class="btn btn-sm" onclick="edAdd('lettings')">+ Add status</button></div>
+        <div><h4>Sales statuses</h4><div id="ed-sales"></div><button class="btn btn-sm" onclick="edAdd('sales')">+ Add status</button></div>
+        <div><h4>Flags</h4><div id="ed-flags"></div><button class="btn btn-sm" onclick="edAdd('flags')">+ Add flag</button></div>
+      </div>
+      <div class="btns" style="margin-top:16px;align-items:center">
+        <button class="btn btn-primary btn-sm" onclick="saveLists()">Save statuses &amp; flags</button>
+        <button class="btn btn-sm" onclick="edCancel()">Undo changes</button>
+        <button class="btn btn-sm" onclick="resetLists()">Reset to defaults</button>
+        <span class="ed-dirty" id="ed-dirty"></span>
+      </div>
+    </div>
     <div class="set-card owner-only">
       <h3>Demo data</h3>
       <p>Loads a set of example properties and negotiators. Only available while the board is empty, so it can't mix with real stock.</p>
@@ -475,6 +505,10 @@ table.pt tr.arc td{opacity:.5}
               <input class="fi" id="fa-date" type="date">
             </div>
           </div>
+          <div class="fg" id="move-wrap" style="display:none;margin-top:12px;margin-bottom:0">
+            <label class="fl">Move-in date <span class="hint">shown on the board until the property is let</span></label>
+            <input class="fi" id="fa-move" type="date" style="max-width:220px">
+          </div>
         </div>
         <div class="fsec">
           <div class="fsec-title">Pricing &amp; Negotiator</div>
@@ -491,12 +525,7 @@ table.pt tr.arc td{opacity:.5}
         </div>
         <div class="fsec">
           <div class="fsec-title">Flags</div>
-          <div class="fopts">
-            <button class="fbtn" id="fb-urgent"  onclick="togFlag('urgent')">▲ Urgent</button>
-            <button class="fbtn" id="fb-blocked" onclick="togFlag('blocked')">✖ Blocked</button>
-            <button class="fbtn" id="fb-await"   onclick="togFlag('await')">● Awaiting Response</button>
-            <button class="fbtn" id="fb-delayed" onclick="togFlag('delayed')">◐ Delayed</button>
-          </div>
+          <div class="fopts" id="fa-flags"></div>
         </div>
         <div class="fsec" style="margin-bottom:0">
           <div class="fsec-title">Notes</div>
@@ -588,13 +617,8 @@ table.pt tr.arc td{opacity:.5}
 const LEGACY_KEY='estateboard_data';   // where the old single-PC version kept its data
 
 /* ── SHARED DEFINITIONS: keep in sync with estate-board.html ───────────── */
-const LS=[{slug:'available',label:'Available'},{slug:'under_offer',label:'Under Offer / Let Agreed'},{slug:'referencing',label:'Referencing in Progress'},{slug:'ref_complete',label:'Referencing Complete'},{slug:'move_pending',label:'Move-in Pending'},{slug:'let',label:'Let'}];
-const SS=[{slug:'available',label:'Available'},{slug:'sstc',label:'Under Offer / SSTC'},{slug:'legal',label:'Legal / Searches in Progress'},{slug:'mortgage',label:'Mortgage / Finance in Progress'},{slug:'exchange',label:'Exchange Pending'},{slug:'sold',label:'Sold'}];
 const CL=['Offer accepted','Referencing sent','Referencing received','Referencing passed','Tenancy documents issued','Deposit received','Move-in booked'];
 const CS=['Offer accepted','Memorandum issued','Solicitors instructed','Mortgage underway','Searches underway','Exchange agreed','Completion booked'];
-const COMPLETE_STAGES=['let','sold'];
-const FLAG_ORDER=['urgent','blocked','await','delayed'];
-const FLAG_NAMES={urgent:'Urgent',blocked:'Blocked',await:'Awaiting Response',delayed:'Delayed'};
 
 // Compliance items per pipeline. "from" is the first stage where the item is required.
 const COMP={
@@ -629,11 +653,6 @@ const midnight=()=>{const d=new Date();d.setHours(0,0,0,0);return d;};
 const calcDays=s=>{const d=parseYMD(s);return d?Math.max(0,Math.round((midnight()-d)/86400000)):0;};
 const daysUntil=s=>{const d=parseYMD(s);return d?Math.round((d-midnight())/86400000):null;};
 const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-const stagesFor=pl=>pl==='sales'?SS:LS;
-const stageIdx=(pl,slug)=>stagesFor(pl).findIndex(s=>s.slug===slug);
-const stageLabel=(pl,slug)=>(stagesFor(pl).find(x=>x.slug===slug)||{label:slug}).label;
-const isComplete=p=>COMPLETE_STAGES.includes(p.stage);
-const primaryFlag=flags=>FLAG_ORDER.find(f=>(flags||[]).includes(f))||null;
 
 function normItem(it){
   if(!it)return{status:'',expiry:''};
@@ -652,7 +671,7 @@ function compStatus(def,item,pl,stage){
     }
     return'ok';
   }
-  if(stageIdx(pl,stage)<stageIdx(pl,def.from))return'pending';
+  if(stageIdx(pl,stage)<fromIdx(pl,def.from))return'pending';
   return'missing';
 }
 function compSummary(p,compOverride,stageOverride){
@@ -674,11 +693,89 @@ function ytdSales(data){
   const fy=fyStart(),t=ymd2(new Date());
   const s=(data&&data.settings)||{};
   const base=s.ytdBaseFrom===fy?(parseInt(s.ytdBase,10)||0):0;
-  const onBoard=((data&&data.properties)||[]).filter(p=>p.pipeline==='sales'&&p.stage==='sold'&&p.enteredStageAt>=fy&&p.enteredStageAt<=t).length;
+  const onBoard=((data&&data.properties)||[]).filter(p=>p.pipeline==='sales'&&isComplete(p)&&p.enteredStageAt>=fy&&p.enteredStageAt<=t).length;
   return{base,onBoard,total:base+onBoard,fy};
 }
 function ymd2(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 /* ── END SHARED ────────────────────────────────────────────────────────── */
+/* ── STATUSES & FLAGS (editable in admin Settings; defaults below) ───────
+   Saved in meta/settings as  stages:{lettings:[…],sales:[…]}  and  flags:[…].
+   Keep this block identical in estate-board.html and estate-board-admin.html. */
+const PALETTE={
+  green: {name:'Green', d:'#2ea043',dt:'#56d364',l:'#1a7f37',lb:'#dafbe1',lbd:'#aceebb'},
+  amber: {name:'Amber', d:'#d29922',dt:'#e3b341',l:'#9a6700',lb:'#fff8c5',lbd:'#f5e0a0'},
+  orange:{name:'Orange',d:'#f0883e',dt:'#ffa657',l:'#bc4c00',lb:'#fff1e5',lbd:'#ffd8b5'},
+  red:   {name:'Red',   d:'#f85149',dt:'#ff7b72',l:'#cf222e',lb:'#ffebe9',lbd:'#ffcecb'},
+  pink:  {name:'Pink',  d:'#db61a2',dt:'#ff9bce',l:'#bf3989',lb:'#ffeff7',lbd:'#ffd3eb'},
+  purple:{name:'Purple',d:'#a371f7',dt:'#d2a8ff',l:'#8250df',lb:'#fbefff',lbd:'#ecd8ff'},
+  blue:  {name:'Blue',  d:'#388bfd',dt:'#79c0ff',l:'#0969da',lb:'#ddf4ff',lbd:'#b6e3ff'},
+  teal:  {name:'Teal',  d:'#39c5bb',dt:'#56d4dd',l:'#1b7c83',lb:'#d8f6f3',lbd:'#a9e9e2'},
+  grey:  {name:'Grey',  d:'#8b949e',dt:'#c9d1d9',l:'#57606a',lb:'#f6f8fa',lbd:'#d0d7de'}
+};
+const DEFAULT_STAGES={
+  lettings:[
+    {slug:'available',   label:'Available',                colour:'green'},
+    {slug:'under_offer', label:'Under Offer / Let Agreed', colour:'orange'},
+    {slug:'referencing', label:'Referencing in Progress',  colour:'blue'},
+    {slug:'ref_complete',label:'Referencing Complete',     colour:'purple'},
+    {slug:'move_pending',label:'Move-in Pending',          colour:'amber'},
+    {slug:'let',         label:'Let',                      colour:'green',done:true}
+  ],
+  sales:[
+    {slug:'available',label:'Available',                      colour:'green'},
+    {slug:'sstc',     label:'Under Offer / SSTC',             colour:'orange'},
+    {slug:'legal',    label:'Legal / Searches in Progress',   colour:'blue'},
+    {slug:'mortgage', label:'Mortgage / Finance in Progress', colour:'purple'},
+    {slug:'exchange', label:'Exchange Pending',               colour:'amber'},
+    {slug:'sold',     label:'Sold',                           colour:'green',done:true}
+  ]
+};
+const DEFAULT_FLAGS=[
+  {key:'urgent', label:'Urgent',            short:'Urgent',  colour:'red',  icon:'⚑',flash:true},
+  {key:'blocked',label:'Blocked',           short:'Blocked', colour:'red',  icon:'✖'},
+  {key:'await',  label:'Awaiting Response', short:'Awaiting',colour:'blue', icon:'◉'},
+  {key:'delayed',label:'Delayed',           short:'Delayed', colour:'amber',icon:'◐'}
+];
+let CUSTOM={};
+function setCustom(settings){CUSTOM=settings||{};}
+function stagesFor(pl){const c=CUSTOM.stages&&CUSTOM.stages[pl];return Array.isArray(c)&&c.length?c:DEFAULT_STAGES[pl==='sales'?'sales':'lettings'];}
+function flagList(){return Array.isArray(CUSTOM.flags)?CUSTOM.flags:DEFAULT_FLAGS;}
+function stageOf(pl,slug){return stagesFor(pl).find(s=>s.slug===slug)||null;}
+function stageIdx(pl,slug){return stagesFor(pl).findIndex(s=>s.slug===slug);}
+function stageLabel(pl,slug){const s=stageOf(pl,slug);return s?s.label:(slug||'');}
+function firstStage(pl){return stagesFor(pl)[0].slug;}
+function isComplete(p){const s=stageOf(p.pipeline,p.stage);return!!(s&&s.done);}
+function activeFlags(flags){const on=flags||[];return flagList().filter(f=>on.includes(f.key));}
+function primaryFlag(flags){return activeFlags(flags)[0]||null;}
+function flagShort(f){return(f.icon?f.icon+' ':'⚑ ')+(f.short||f.label);}
+function flagLong(f){return(f.icon?f.icon+' ':'⚑ ')+f.label;}
+function colourKey(c){return PALETTE[c]?c:'grey';}
+// Where a compliance item becomes due, even if that status has been renamed, moved or removed
+function fromIdx(pl,from){
+  const cur=stagesFor(pl);const i=cur.findIndex(s=>s.slug===from);if(i>-1)return i;
+  const def=DEFAULT_STAGES[pl==='sales'?'sales':'lettings'];const k=def.findIndex(s=>s.slug===from);
+  for(let j=k+1;j<def.length;j++){const x=cur.findIndex(s=>s.slug===def[j].slug);if(x>-1)return x;}
+  return Infinity;
+}
+// Colour classes .c-red etc. Each sets --c (bar/dot), --ct (text), --cbg and --cbd (pill fill and border)
+function paletteCSS(mode){
+  const rgba=(h,a)=>{const n=parseInt(h.slice(1),16);return`rgba(${n>>16},${(n>>8)&255},${n&255},${a})`;};
+  const dark=k=>{const p=PALETTE[k];return`--c:${p.d};--ct:${p.dt};--cbg:${rgba(p.d,.18)};--cbd:${rgba(p.d,.38)}`;};
+  const light=k=>{const p=PALETTE[k];return`--c:${p.l};--ct:${p.l};--cbg:${p.lb};--cbd:${p.lbd}`;};
+  return Object.keys(PALETTE).map(k=>mode==='light'
+    ?`.c-${k}{${light(k)}}`
+    :`.c-${k}{${dark(k)}} html[data-theme="light"] .c-${k}{${light(k)}}`).join('\n');
+}
+function injectPalette(mode){const st=document.createElement('style');st.textContent=paletteCSS(mode);document.head.appendChild(st);}
+// Move-in date chip text and urgency
+function moveInfo(p){
+  if(p.pipeline!=='lettings'||!p.moveDate||isComplete(p)||stageIdx(p.pipeline,p.stage)<1)return null;
+  const d=daysUntil(p.moveDate);if(d===null)return null;
+  const dt=parseYMD(p.moveDate).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+  const txt=d===0?'Move-in today':d===1?'Move-in tomorrow':d<0?'Move-in was '+dt:'Move-in '+dt;
+  return{txt,cls:d<0?'late':d<=7?'soon':'',days:d};
+}
+/* ── END STATUSES & FLAGS ──────────────────────────────────────────────── */
 
 const COLOURS=[
   {bg:'#e0e7ff',fg:'#3730a3',name:'Indigo'},
@@ -856,7 +953,7 @@ function startListeners(){
     STORE.negotiators=snap.docs.map(docToObj);LOADED.n=true;refreshSoon();
   },fail));
   unsubs.push(sDoc().onSnapshot(snap=>{
-    STORE.settings=snap.exists?(snap.data()||{}):{};LOADED.s=true;
+    STORE.settings=snap.exists?(snap.data()||{}):{};LOADED.s=true;setCustom(STORE.settings);
     if(!snap.exists&&!snap.metadata.fromCache)sDoc().set(DEFAULT_SETTINGS,{merge:true}).catch(()=>{});
     refreshSoon();
   },fail));
@@ -911,16 +1008,16 @@ function renderTable(props){
     const dc=p.archived?'':(done?'dc-done':d>=28?'dc-danger':d>=14?'dc-warn':'');
     const cnt=(p.checklist||[]).filter(Boolean).length;
     const pct=Math.round(cnt/7*100);
-    const fl=FLAG_ORDER.filter(f=>(p.flags||[]).includes(f));
-    const fps=fl.map(f=>`<div class="fp ${f}" title="${FLAG_NAMES[f]}"></div>`).join('');
+    const fps=activeFlags(p.flags).map(f=>`<div class="fp c-${colourKey(f.colour)}" title="${esc(f.label)}"></div>`).join('');
+    const mv=moveInfo(p);
     const col=negColour(p.negotiatorId);
     const neg=negById(p.negotiatorId);
     const cs=compSummary(p);
     const compCell=cs.total?`<span class="cbadge ${cs.bad?'has-bad':cs.warn?'has-warn':'all-ok'}">${cs.ok+cs.warn}/${cs.total}</span>`:'<span class="muted">–</span>';
     return `<tr class="${p.archived?'arc':''}" onclick="openModal('${esc(p.id)}')">
-      <td><strong>${esc(p.displayAddr)}</strong>${p.archived?'<span class="arc-tag">Archived</span>':''}</td>
+      <td><strong>${esc(p.displayAddr)}</strong>${p.archived?'<span class="arc-tag">Archived</span>':''}${mv&&!p.archived?`<div class="t-move ${mv.cls}">${esc(mv.txt)}</div>`:''}</td>
       <td><span class="badge ${p.pipeline==='lettings'?'bL':'bS'}">${p.pipeline==='lettings'?'Lettings':'Sales'}</span></td>
-      <td><span class="badge b-${p.archived?'arc':esc(p.stage)}">${esc(stageLabel(p.pipeline,p.stage))}</span></td>
+      <td><span class="badge ${p.archived?'b-arc':'c-'+colourKey((stageOf(p.pipeline,p.stage)||{}).colour)}">${esc(stageLabel(p.pipeline,p.stage))}</span></td>
       <td style="font-variant-numeric:tabular-nums">${esc(p.price||'–')}</td>
       <td><div class="nc"><div class="ni" style="background:${col.bg};color:${col.fg}">${esc(neg?neg.initials:'?')}</div><span class="nn">${esc(neg?neg.name:'Unassigned')}</span></div></td>
       <td><span class="${dc}" style="font-size:12px;font-variant-numeric:tabular-nums">${dl}</span></td>
@@ -972,7 +1069,7 @@ function updateBackupBanner(){
 }
 
 function populateFilters(){
-  const all=[...LS,...SS],ps=getProps(),ns=getNegs();
+  const all=[...stagesFor('lettings'),...stagesFor('sales')],ps=getProps(),ns=getNegs();
   const fs=document.getElementById('fs'),fn=document.getElementById('fn');
   const keepS=fs.value,keepN=fn.value;
   const slugs=[...new Set(ps.map(p=>p.stage))];
@@ -999,7 +1096,7 @@ function openModal(id){
   eId=id||null;openedAt=null;
   document.getElementById('btn-del').style.display=id?'inline-flex':'none';
   document.getElementById('btn-arc').style.display=id?'inline-flex':'none';
-  let stage='available';
+  let stage='';
   const upd=document.getElementById('upd-line');upd.textContent='';
   if(id){
     const p=getProps().find(x=>x.id===id);if(!p){eId=null;return;}
@@ -1008,6 +1105,7 @@ function openModal(id){
     document.getElementById('fa-addr').value=p.displayAddr||'';
     document.getElementById('fa-price').value=p.price||'';
     document.getElementById('fa-date').value=p.enteredStageAt||today();
+    document.getElementById('fa-move').value=p.moveDate||'';
     document.getElementById('fa-notes').value=p.notes||'';
     document.getElementById('fa-boardnote').value=p.boardNote||'';
     curPL=p.pipeline||'lettings';
@@ -1021,13 +1119,15 @@ function openModal(id){
   }else{
     ['fa-addr','fa-price','fa-notes','fa-boardnote'].forEach(i=>document.getElementById(i).value='');
     document.getElementById('fa-date').value=today();
+    document.getElementById('fa-move').value='';
     curPL='lettings';curFlags=[];curCL=Array(7).fill(false);curCompliance={};
     document.getElementById('mtitle').textContent='Add Property';
     populateNegDrop('');
   }
   setPL(curPL,true);
   const sel=document.getElementById('fa-st');
-  sel.value=stagesFor(curPL).find(s=>s.slug===stage)?stage:'available';
+  sel.value=stageOf(curPL,stage)?stage:firstStage(curPL);
+  updateMoveField();
   renderCompliance();
   renderFlags();
   document.getElementById('mbg').classList.add('open');
@@ -1039,6 +1139,12 @@ function closeModal(){document.getElementById('mbg').classList.remove('open');eI
 function onStageChange(){
   document.getElementById('fa-date').value=today();
   renderCompliance();
+  updateMoveField();
+}
+function updateMoveField(){
+  const st=document.getElementById('fa-st').value;
+  const show=curPL==='lettings'&&stageIdx(curPL,st)>0&&!(stageOf(curPL,st)||{}).done;
+  document.getElementById('move-wrap').style.display=show?'':'none';
 }
 
 function setPL(pl,init){
@@ -1052,9 +1158,9 @@ function setPL(pl,init){
   document.getElementById('opt-L').className='popt'+(pl==='lettings'?' aL':'');
   document.getElementById('opt-S').className='popt'+(pl==='sales'?' aS':'');
   document.getElementById('fa-st').innerHTML=stagesFor(pl).map(s=>`<option value="${s.slug}">${s.label}</option>`).join('');
-  document.getElementById('fa-st').value='available';
+  document.getElementById('fa-st').value=firstStage(pl);
   renderCL();
-  if(!init)renderCompliance();
+  if(!init){renderCompliance();updateMoveField();}
 }
 
 function renderCL(){
@@ -1068,12 +1174,17 @@ function renderCL(){
 }
 
 function togCL(i){curCL[i]=document.getElementById('chk'+i).checked;document.getElementById('ci'+i).className='cli'+(curCL[i]?' done':'');}
-function renderFlags(){FLAG_ORDER.forEach(f=>{const b=document.getElementById('fb-'+f);if(b)b.className='fbtn'+(curFlags.includes(f)?' a-'+f:'');});}
+function renderFlags(){
+  document.getElementById('fa-flags').innerHTML=flagList().map(f=>{
+    const on=curFlags.includes(f.key);
+    return`<button class="fbtn${on?' on c-'+colourKey(f.colour):''}" onclick="togFlag('${esc(f.key)}')">${esc((f.icon||'⚑')+' '+f.label)}</button>`;
+  }).join('')||'<span class="muted">No flags set up. Add some in Settings.</span>';
+}
 function togFlag(f){curFlags=curFlags.includes(f)?curFlags.filter(x=>x!==f):[...curFlags,f];renderFlags();}
 
 function renderCompliance(){
   const defs=COMP[curPL];
-  const stage=document.getElementById('fa-st').value||'available';
+  const stage=document.getElementById('fa-st').value||firstStage(curPL);
   document.getElementById('comp-heading').textContent='Compliance · '+(curPL==='sales'?'Sales':'Lettings');
   document.getElementById('comp-items').innerHTML=defs.map(def=>{
     const it=normItem(curCompliance[def.key]);
@@ -1135,6 +1246,7 @@ function saveProp(){
     notes:document.getElementById('fa-notes').value.trim(),
     boardNote:document.getElementById('fa-boardnote').value.trim(),
     flags:[...curFlags],checklist:[...curCL],compliance,
+    moveDate:curPL==='lettings'?(document.getElementById('fa-move').value||''):'',
     ...stamp()
   };
   const id=wasEdit?eId:uid();
@@ -1319,6 +1431,7 @@ function renderSettings(){
 function renderSettingsMeta(){
   const d=getData();
   renderThemeToggle(d.settings.boardTheme);
+  if(!ED_DIRTY)renderLists();
   renderNegColToggle(d.settings.showNegotiators!==false);
   renderYtdMeta();
   document.getElementById('set-lastexp').textContent=d.settings.lastExport?fmtDate(d.settings.lastExport):'never';
@@ -1337,6 +1450,89 @@ function saveYtd(){
   const v=Math.max(0,parseInt(document.getElementById('set-ytd').value,10)||0);
   commit(sDoc().set({ytdBase:v,ytdBaseFrom:fyStart()},{merge:true}),'Sales this year saved ✓');
 }
+/* ── STATUSES & FLAGS EDITOR (owner only) ─────────────────────────────── */
+let ED=null,ED_DIRTY=false;
+const ED_LISTS=['lettings','sales','flags'];
+function edSnapshot(){return JSON.parse(JSON.stringify({lettings:stagesFor('lettings'),sales:stagesFor('sales'),flags:flagList()}));}
+function renderLists(){
+  if(!isOwner())return;
+  if(!ED_DIRTY||!ED)ED=edSnapshot();
+  const colOpts=sel=>Object.keys(PALETTE).map(k=>`<option value="${k}"${k===sel?' selected':''}>${PALETTE[k].name}</option>`).join('');
+  ED_LISTS.forEach(list=>{
+    const items=ED[list],isFlag=list==='flags';
+    document.getElementById('ed-'+list).innerHTML=items.map((it,i)=>{
+      const col=colourKey(it.colour),field=isFlag?'flash':'done';
+      return`<div class="ed-row">
+        <select class="ed-col c-${col}" onchange="edSet('${list}',${i},'colour',this.value,true)" title="Colour">${colOpts(col)}</select>
+        <input class="fi ed-lbl" value="${esc(it.label)}" maxlength="40" oninput="edSet('${list}',${i},'label',this.value)">
+        <label class="ed-chk" title="${isFlag?'Pulse the bar on the board':'The final status: shows ✓ on the board'}"><input type="checkbox"${it[field]?' checked':''} onchange="edSet('${list}',${i},'${field}',this.checked)">${isFlag?'Flash':'Completed'}</label>
+        <button class="ed-btn" title="Move up" onclick="edMove('${list}',${i},-1)"${i===0?' disabled':''}>▲</button>
+        <button class="ed-btn" title="Move down" onclick="edMove('${list}',${i},1)"${i===items.length-1?' disabled':''}>▼</button>
+        <button class="ed-btn ed-x" title="Remove" onclick="edRemove('${list}',${i})">✕</button>
+      </div>`;
+    }).join('')||'<div class="muted" style="margin-bottom:8px">None yet</div>';
+  });
+  document.getElementById('ed-dirty').textContent=ED_DIRTY?'Unsaved changes':'';
+}
+function edTouch(rerender){ED_DIRTY=true;if(rerender)renderLists();else document.getElementById('ed-dirty').textContent='Unsaved changes';}
+function edSet(list,i,field,val,rerender){
+  const it=ED[list][i];if(!it)return;
+  it[field]=val;
+  if(list==='flags'&&field==='label')delete it.short;
+  edTouch(rerender);
+}
+function edMove(list,i,dir){
+  const a=ED[list],j=i+dir;if(j<0||j>=a.length)return;
+  [a[i],a[j]]=[a[j],a[i]];edTouch(true);
+}
+function edRemove(list,i){
+  const it=ED[list][i];if(!it)return;
+  if(list!=='flags'){
+    const n=getProps().filter(p=>p.pipeline===list&&p.stage===it.slug).length;
+    if(n){alert(`${n} ${list} propert${n===1?'y is':'ies are'} at "${it.label}" (including any archived). Move ${n===1?'it':'them'} to another status first.`);return;}
+  }
+  ED[list].splice(i,1);edTouch(true);
+}
+function edAdd(list){
+  const rnd=Math.random().toString(36).slice(2,8);
+  if(list==='flags')ED.flags.push({key:'f_'+rnd,label:'New flag',colour:'purple',icon:'⚑',flash:false});
+  else{
+    const a=ED[list];const at=Math.max(0,a.findIndex(s=>s.done));
+    a.splice(at===0&&!a[0].done?a.length:at,0,{slug:'c_'+rnd,label:'New status',colour:'teal',done:false});
+  }
+  edTouch(true);
+  const rows=document.querySelectorAll('#ed-'+list+' .ed-lbl');
+  const idx=list==='flags'?ED.flags.length-1:ED[list].findIndex(s=>s.label==='New status'&&s.slug.endsWith(rnd));
+  if(rows[idx]){rows[idx].focus();rows[idx].select();}
+}
+function edCancel(){ED_DIRTY=false;ED=null;renderLists();}
+function cleanStage(s){return{slug:String(s.slug),label:String(s.label).trim(),colour:colourKey(s.colour),done:!!s.done};}
+function cleanFlag(f){const o={key:String(f.key),label:String(f.label).trim(),colour:colourKey(f.colour),icon:f.icon||'⚑',flash:!!f.flash};if(typeof f.short==='string'&&f.short)o.short=f.short;return o;}
+function saveLists(){
+  const out={lettings:ED.lettings.map(cleanStage),sales:ED.sales.map(cleanStage),flags:ED.flags.map(cleanFlag)};
+  for(const list of ED_LISTS){
+    if(out[list].some(x=>!x.label)){alert('Every status and flag needs a name.');return;}
+  }
+  for(const pl of ['lettings','sales']){
+    const nm=pl==='sales'?'Sales':'Lettings';
+    if(out[pl].length<2){alert(nm+' needs at least two statuses.');return;}
+    if(!out[pl].some(s=>s.done)){alert(nm+' needs a status ticked as Completed (for example Let or Sold).');return;}
+    const keep=new Set(out[pl].map(s=>s.slug));
+    const stuck=getProps().filter(p=>p.pipeline===pl&&!keep.has(p.stage));
+    if(stuck.length){alert(`${stuck.length} ${pl} propert${stuck.length===1?'y is':'ies are'} at a status you've removed. Move ${stuck.length===1?'it':'them'} first.`);return;}
+  }
+  commit(sDoc().set({stages:{lettings:out.lettings,sales:out.sales},flags:out.flags},{merge:true}),'Statuses & flags saved ✓')
+    .then(ok=>{if(ok){ED_DIRTY=false;ED=null;renderLists();}});
+}
+function resetLists(){
+  const def=new Set([...DEFAULT_STAGES.lettings.map(s=>'lettings:'+s.slug),...DEFAULT_STAGES.sales.map(s=>'sales:'+s.slug)]);
+  const stuck=getProps().filter(p=>!def.has(p.pipeline+':'+p.stage));
+  if(stuck.length){alert(`${stuck.length} propert${stuck.length===1?'y is':'ies are'} at a status you added yourself. Move ${stuck.length===1?'it':'them'} to a standard status first.`);return;}
+  if(!confirm('Put the statuses and flags back to the original set? Custom flags on properties will stop showing.'))return;
+  commit(sDoc().set({stages:JSON.parse(JSON.stringify(DEFAULT_STAGES)),flags:JSON.parse(JSON.stringify(DEFAULT_FLAGS))},{merge:true}),'Statuses & flags reset ✓')
+    .then(ok=>{if(ok){ED_DIRTY=false;ED=null;renderLists();}});
+}
+
 function renderThemeToggle(t){
   document.getElementById('th-dark').className='popt'+(t!=='light'?' aL':'');
   document.getElementById('th-light').className='popt'+(t==='light'?' aL':'');
@@ -1552,6 +1748,7 @@ setInterval(()=>{if(ME)refresh();},60000);
   auth=firebase.auth();
   db=firebase.firestore();
   auth.onAuthStateChanged(u=>{onAuth(u).catch(e=>{console.error(e);authNote='Something went wrong signing in: '+friendly(e);showLogin();});});
+  injectPalette('light');
   renderTable([]);
 })();
 </script>

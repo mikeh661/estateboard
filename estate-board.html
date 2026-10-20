@@ -65,6 +65,22 @@
   /* Negotiator column switched off in admin Settings */
   html.hide-neg .cl-neg,html.hide-neg .p-neg,html.hide-neg .neg-sec{display:none}
 
+  /* Colour-driven flags, statuses and move-in dates */
+  .p-bar.on{background:var(--c)}
+  .p-bar.flash{animation:uf 2s ease-in-out infinite}
+  .band-acc[class*=" c-"]{background:var(--c)}
+  .flag-pill[class*=" c-"],.card-flag-pill[class*=" c-"]{background:var(--cbg);color:var(--ct);border:1px solid var(--cbd)}
+  .flag-pill{max-width:150px;overflow:hidden;text-overflow:ellipsis}
+  .card-badge.cb-stage{background:var(--cbg);color:var(--ct);border-color:var(--cbd)}
+  .p-move{flex-shrink:0;margin-right:10px;font-size:9.5px;font-weight:600;padding:2px 7px;border-radius:4px;background:var(--border2);color:var(--muted);white-space:nowrap}
+  .p-move.soon{background:rgba(210,153,34,.18);color:#e3b341}
+  .p-move.late{background:rgba(248,81,73,.18);color:#ff7b72}
+  .card-badge.cb-move{background:var(--border2);color:var(--muted);border-color:var(--border)}
+  .card-badge.cb-move.soon{background:rgba(210,153,34,.15);color:#e3b341;border-color:rgba(210,153,34,.3)}
+  .card-badge.cb-move.late{background:rgba(248,81,73,.15);color:#ff7b72;border-color:rgba(248,81,73,.3)}
+  html[data-theme="light"] .p-move.soon,html[data-theme="light"] .card-badge.cb-move.soon{background:#fff8c5;color:#9a6700;border-color:#f5e0a0}
+  html[data-theme="light"] .p-move.late,html[data-theme="light"] .card-badge.cb-move.late{background:#ffebe9;color:#cf222e;border-color:#ffcecb}
+
   /* PANELS */
   #panels{display:flex;flex:1;overflow:hidden}
   .pp{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
@@ -84,7 +100,7 @@
   .cl-days{width:34px;flex-shrink:0;margin-right:10px;text-align:right}
   .cl-prog{width:70px;flex-shrink:0;margin-right:10px;text-align:left}
   .cl-comp{width:84px;flex-shrink:0;margin-right:10px;text-align:left}
-  .cl-flag{width:84px;flex-shrink:0;text-align:left}
+  .cl-flag{width:150px;flex-shrink:0;text-align:left}
 
   /* BANDS */
   .bw{flex:1;overflow-y:auto;overflow-x:hidden}
@@ -127,7 +143,7 @@
   .cdot.warn{background:#d29922}
   .cdot.bad {background:#f85149}
   .cdot.na  {background:var(--border2);border:.5px solid var(--faint)}
-  .p-flag{width:84px;flex-shrink:0;display:flex;align-items:center}
+  .p-flag{width:150px;flex-shrink:0;display:flex;align-items:center}
   .flag-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:4px;font-size:9.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;white-space:nowrap;line-height:1.4}
   .flag-pill.urgent,.flag-pill.blocked{background:rgba(248,81,73,.18);color:#ff7b72;border:1px solid rgba(248,81,73,.35)}
   .flag-pill.await  {background:rgba(56,139,253,.18);color:#79c0ff;border:1px solid rgba(56,139,253,.35)}
@@ -312,9 +328,7 @@
 
   <div id="footer">
     <div class="legend">
-      <div class="li"><div class="lb" style="background:var(--red)"></div>Urgent / Blocked</div>
-      <div class="li"><div class="lb" style="background:var(--blue)"></div>Awaiting Response</div>
-      <div class="li"><div class="lb" style="background:var(--yellow)"></div>Delayed</div>
+      <span id="flag-legend" style="display:contents"></span>
     </div>
     <div class="legend">
       <span>Compliance:</span>
@@ -370,26 +384,8 @@
 const LOCAL_THEME_KEY='estateboard_theme_here';
 
 /* ── SHARED DEFINITIONS: keep in sync with estate-board-admin.html ─────── */
-const LS=[
-  {slug:'available',   label:'Available',                colour:'#2ea043'},
-  {slug:'under_offer', label:'Under Offer / Let Agreed', colour:'#f0883e'},
-  {slug:'referencing', label:'Referencing in Progress',  colour:'#388bfd'},
-  {slug:'ref_complete',label:'Referencing Complete',     colour:'#a371f7'},
-  {slug:'move_pending',label:'Move-in Pending',          colour:'#db6d28'},
-  {slug:'let',         label:'Let',                      colour:'#3fb950'},
-];
-const SS=[
-  {slug:'available',label:'Available',                      colour:'#2ea043'},
-  {slug:'sstc',     label:'Under Offer / SSTC',             colour:'#f0883e'},
-  {slug:'legal',    label:'Legal / Searches in Progress',   colour:'#388bfd'},
-  {slug:'mortgage', label:'Mortgage / Finance in Progress', colour:'#a371f7'},
-  {slug:'exchange', label:'Exchange Pending',               colour:'#db6d28'},
-  {slug:'sold',     label:'Sold',                           colour:'#3fb950'},
-];
 const CL=['Offer accepted','Referencing sent','Referencing received','Referencing passed','Tenancy documents issued','Deposit received','Move-in booked'];
 const CS=['Offer accepted','Memorandum issued','Solicitors instructed','Mortgage underway','Searches underway','Exchange agreed','Completion booked'];
-const COMPLETE_STAGES=['let','sold'];
-const FLAG_ORDER=['urgent','blocked','await','delayed'];
 const COMP={
   lettings:[
     {key:'gas',     label:'Gas Safety Certificate',        expiry:false,na:true, from:'available'},
@@ -418,10 +414,6 @@ const midnight=()=>{const d=new Date();d.setHours(0,0,0,0);return d;};
 const calcDays=s=>{const d=parseYMD(s);return d?Math.max(0,Math.round((midnight()-d)/86400000)):0;};
 const daysUntil=s=>{const d=parseYMD(s);return d?Math.round((d-midnight())/86400000):null;};
 const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-const stagesFor=pl=>pl==='sales'?SS:LS;
-const stageIdx=(pl,slug)=>stagesFor(pl).findIndex(s=>s.slug===slug);
-const isComplete=p=>COMPLETE_STAGES.includes(p.stage);
-const primaryFlag=flags=>FLAG_ORDER.find(f=>(flags||[]).includes(f))||null;
 const fmtDate=s=>{const d=parseYMD(s);return d?d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'';};
 
 function normItem(it){
@@ -441,7 +433,7 @@ function compStatus(def,item,pl,stage){
     }
     return'ok';
   }
-  if(stageIdx(pl,stage)<stageIdx(pl,def.from))return'pending';
+  if(stageIdx(pl,stage)<fromIdx(pl,def.from))return'pending';
   return'missing';
 }
 // Index of the current step: first unticked step, but only once something is ticked
@@ -459,11 +451,89 @@ function ytdSales(data){
   const fy=fyStart(),t=ymd2(new Date());
   const s=(data&&data.settings)||{};
   const base=s.ytdBaseFrom===fy?(parseInt(s.ytdBase,10)||0):0;
-  const onBoard=((data&&data.properties)||[]).filter(p=>p.pipeline==='sales'&&p.stage==='sold'&&p.enteredStageAt>=fy&&p.enteredStageAt<=t).length;
+  const onBoard=((data&&data.properties)||[]).filter(p=>p.pipeline==='sales'&&isComplete(p)&&p.enteredStageAt>=fy&&p.enteredStageAt<=t).length;
   return{base,onBoard,total:base+onBoard,fy};
 }
 function ymd2(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 /* ── END SHARED ────────────────────────────────────────────────────────── */
+/* ── STATUSES & FLAGS (editable in admin Settings; defaults below) ───────
+   Saved in meta/settings as  stages:{lettings:[…],sales:[…]}  and  flags:[…].
+   Keep this block identical in estate-board.html and estate-board-admin.html. */
+const PALETTE={
+  green: {name:'Green', d:'#2ea043',dt:'#56d364',l:'#1a7f37',lb:'#dafbe1',lbd:'#aceebb'},
+  amber: {name:'Amber', d:'#d29922',dt:'#e3b341',l:'#9a6700',lb:'#fff8c5',lbd:'#f5e0a0'},
+  orange:{name:'Orange',d:'#f0883e',dt:'#ffa657',l:'#bc4c00',lb:'#fff1e5',lbd:'#ffd8b5'},
+  red:   {name:'Red',   d:'#f85149',dt:'#ff7b72',l:'#cf222e',lb:'#ffebe9',lbd:'#ffcecb'},
+  pink:  {name:'Pink',  d:'#db61a2',dt:'#ff9bce',l:'#bf3989',lb:'#ffeff7',lbd:'#ffd3eb'},
+  purple:{name:'Purple',d:'#a371f7',dt:'#d2a8ff',l:'#8250df',lb:'#fbefff',lbd:'#ecd8ff'},
+  blue:  {name:'Blue',  d:'#388bfd',dt:'#79c0ff',l:'#0969da',lb:'#ddf4ff',lbd:'#b6e3ff'},
+  teal:  {name:'Teal',  d:'#39c5bb',dt:'#56d4dd',l:'#1b7c83',lb:'#d8f6f3',lbd:'#a9e9e2'},
+  grey:  {name:'Grey',  d:'#8b949e',dt:'#c9d1d9',l:'#57606a',lb:'#f6f8fa',lbd:'#d0d7de'}
+};
+const DEFAULT_STAGES={
+  lettings:[
+    {slug:'available',   label:'Available',                colour:'green'},
+    {slug:'under_offer', label:'Under Offer / Let Agreed', colour:'orange'},
+    {slug:'referencing', label:'Referencing in Progress',  colour:'blue'},
+    {slug:'ref_complete',label:'Referencing Complete',     colour:'purple'},
+    {slug:'move_pending',label:'Move-in Pending',          colour:'amber'},
+    {slug:'let',         label:'Let',                      colour:'green',done:true}
+  ],
+  sales:[
+    {slug:'available',label:'Available',                      colour:'green'},
+    {slug:'sstc',     label:'Under Offer / SSTC',             colour:'orange'},
+    {slug:'legal',    label:'Legal / Searches in Progress',   colour:'blue'},
+    {slug:'mortgage', label:'Mortgage / Finance in Progress', colour:'purple'},
+    {slug:'exchange', label:'Exchange Pending',               colour:'amber'},
+    {slug:'sold',     label:'Sold',                           colour:'green',done:true}
+  ]
+};
+const DEFAULT_FLAGS=[
+  {key:'urgent', label:'Urgent',            short:'Urgent',  colour:'red',  icon:'⚑',flash:true},
+  {key:'blocked',label:'Blocked',           short:'Blocked', colour:'red',  icon:'✖'},
+  {key:'await',  label:'Awaiting Response', short:'Awaiting',colour:'blue', icon:'◉'},
+  {key:'delayed',label:'Delayed',           short:'Delayed', colour:'amber',icon:'◐'}
+];
+let CUSTOM={};
+function setCustom(settings){CUSTOM=settings||{};}
+function stagesFor(pl){const c=CUSTOM.stages&&CUSTOM.stages[pl];return Array.isArray(c)&&c.length?c:DEFAULT_STAGES[pl==='sales'?'sales':'lettings'];}
+function flagList(){return Array.isArray(CUSTOM.flags)?CUSTOM.flags:DEFAULT_FLAGS;}
+function stageOf(pl,slug){return stagesFor(pl).find(s=>s.slug===slug)||null;}
+function stageIdx(pl,slug){return stagesFor(pl).findIndex(s=>s.slug===slug);}
+function stageLabel(pl,slug){const s=stageOf(pl,slug);return s?s.label:(slug||'');}
+function firstStage(pl){return stagesFor(pl)[0].slug;}
+function isComplete(p){const s=stageOf(p.pipeline,p.stage);return!!(s&&s.done);}
+function activeFlags(flags){const on=flags||[];return flagList().filter(f=>on.includes(f.key));}
+function primaryFlag(flags){return activeFlags(flags)[0]||null;}
+function flagShort(f){return(f.icon?f.icon+' ':'⚑ ')+(f.short||f.label);}
+function flagLong(f){return(f.icon?f.icon+' ':'⚑ ')+f.label;}
+function colourKey(c){return PALETTE[c]?c:'grey';}
+// Where a compliance item becomes due, even if that status has been renamed, moved or removed
+function fromIdx(pl,from){
+  const cur=stagesFor(pl);const i=cur.findIndex(s=>s.slug===from);if(i>-1)return i;
+  const def=DEFAULT_STAGES[pl==='sales'?'sales':'lettings'];const k=def.findIndex(s=>s.slug===from);
+  for(let j=k+1;j<def.length;j++){const x=cur.findIndex(s=>s.slug===def[j].slug);if(x>-1)return x;}
+  return Infinity;
+}
+// Colour classes .c-red etc. Each sets --c (bar/dot), --ct (text), --cbg and --cbd (pill fill and border)
+function paletteCSS(mode){
+  const rgba=(h,a)=>{const n=parseInt(h.slice(1),16);return`rgba(${n>>16},${(n>>8)&255},${n&255},${a})`;};
+  const dark=k=>{const p=PALETTE[k];return`--c:${p.d};--ct:${p.dt};--cbg:${rgba(p.d,.18)};--cbd:${rgba(p.d,.38)}`;};
+  const light=k=>{const p=PALETTE[k];return`--c:${p.l};--ct:${p.l};--cbg:${p.lb};--cbd:${p.lbd}`;};
+  return Object.keys(PALETTE).map(k=>mode==='light'
+    ?`.c-${k}{${light(k)}}`
+    :`.c-${k}{${dark(k)}} html[data-theme="light"] .c-${k}{${light(k)}}`).join('\n');
+}
+function injectPalette(mode){const st=document.createElement('style');st.textContent=paletteCSS(mode);document.head.appendChild(st);}
+// Move-in date chip text and urgency
+function moveInfo(p){
+  if(p.pipeline!=='lettings'||!p.moveDate||isComplete(p)||stageIdx(p.pipeline,p.stage)<1)return null;
+  const d=daysUntil(p.moveDate);if(d===null)return null;
+  const dt=parseYMD(p.moveDate).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+  const txt=d===0?'Move-in today':d===1?'Move-in tomorrow':d<0?'Move-in was '+dt:'Move-in '+dt;
+  return{txt,cls:d<0?'late':d<=7?'soon':'',days:d};
+}
+/* ── END STATUSES & FLAGS ──────────────────────────────────────────────── */
 
 const NEG_COLOURS=[
   {bg:'#1a1f6e',fg:'#a5b4fc'},{bg:'#0d2d56',fg:'#93c5fd'},{bg:'#0a3728',fg:'#6ee7b7'},
@@ -477,8 +547,6 @@ const NEG_COLOURS_LIGHT=[
   {bg:'#f3e8ff',fg:'#6b21a8'},{bg:'#ccfbf1',fg:'#134e4a'},{bg:'#e0f2fe',fg:'#0c4a6e'},
   {bg:'#f1f5f9',fg:'#374151'}
 ];
-const FLAG_LABELS={urgent:'⚑ Urgent',blocked:'✖ Blocked',await:'◉ Awaiting',delayed:'◐ Delayed'};
-const FLAG_LABELS_LONG={urgent:'⚑ Urgent',blocked:'✖ Blocked',await:'◉ Awaiting Response',delayed:'◐ Delayed'};
 
 let DATA=null,NEG_MAP={},openId=null;
 let URL_THEME=(new URLSearchParams(location.search).get('theme')||'').toLowerCase();
@@ -585,6 +653,10 @@ async function onAuth(u){
   unsubs.push(sDoc().onSnapshot(snap=>{STORE.settings=snap.exists?(snap.data()||{}):{};renderSoon();},fail));
 }
 let _rs=null;
+function renderFlagLegend(){
+  const el=document.getElementById('flag-legend');if(!el)return;
+  el.innerHTML=flagList().map(f=>`<div class="li"><div class="lb c-${colourKey(f.colour)}" style="background:var(--c)"></div>${esc(f.label)}</div>`).join('');
+}
 function renderSoon(){if(_rs)return;_rs=setTimeout(()=>{_rs=null;render();},0);}
 window.addEventListener('online',()=>{ONLINE=true;setLive('warn','Reconnecting…');});
 window.addEventListener('offline',()=>{ONLINE=false;setLive('bad','Offline, showing last update');});
@@ -628,10 +700,10 @@ function makeCompDots(p){
 }
 
 function flagCell(flags){
-  const f=primaryFlag(flags);
+  const on=activeFlags(flags),f=on[0];
   if(!f)return'<div class="p-flag"></div>';
-  const extra=(flags||[]).filter(x=>FLAG_ORDER.includes(x)).length-1;
-  return`<div class="p-flag"><span class="flag-pill ${f}">${FLAG_LABELS[f]}</span>${extra>0?`<span class="flag-more">+${extra}</span>`:''}</div>`;
+  const extra=on.length-1;
+  return`<div class="p-flag"><span class="flag-pill c-${colourKey(f.colour)}" title="${esc(on.map(x=>x.label).join(', '))}">${esc(flagShort(f))}</span>${extra>0?`<span class="flag-more">+${extra}</span>`:''}</div>`;
 }
 
 function renderBands(containerId,stages,props){
@@ -641,23 +713,25 @@ function renderBands(containerId,stages,props){
     const rows=props.filter(p=>p.stage===stage.slug);
     if(!rows.length)return;
     // Completed: most recent first. Everything else: longest in stage first.
-    const done=COMPLETE_STAGES.includes(stage.slug);
+    const done=!!stage.done;
     rows.sort((a,b)=>done?calcDays(a.enteredStageAt)-calcDays(b.enteredStageAt):calcDays(b.enteredStageAt)-calcDays(a.enteredStageAt));
     html+=`<div class="band">
       <div class="band-hdr">
-        <div class="band-acc" style="background:${stage.colour}"></div>
+        <div class="band-acc c-${colourKey(stage.colour)}"></div>
         <div class="band-name">${esc(stage.label)}</div>
         <div class="band-cnt">${rows.length}</div>
       </div>`;
     rows.forEach(p=>{
       const di=dayInfo(p);
-      const bar=primaryFlag(p.flags)||'none';
+      const pf=primaryFlag(p.flags);
+      const bar=pf?`on c-${colourKey(pf.colour)}${pf.flash?' flash':''}`:'none';
+      const mv=moveInfo(p);
       const n=negFor(p);
       const negStyle=n.bg?` style="background:${n.bg};color:${n.fg};border-color:transparent"`:'';
       html+=`<div class="pr" onclick="openCard('${esc(p.id)}')">
         <div class="p-bar ${bar}"></div>
         <div class="p-neg"${negStyle} title="${esc(n.name)}">${esc(String(n.initials).substr(0,2))}</div>
-        <div class="p-addr" title="${esc(p.displayAddr)}">${esc(p.displayAddr)}</div>
+        <div class="p-addr" title="${esc(p.displayAddr)}">${esc(p.displayAddr)}</div>${mv?`<div class="p-move ${mv.cls}">${esc(mv.txt)}</div>`:''}
         <div class="p-price">${esc(p.price||'–')}</div>
         <div class="p-days ${di.cls}">${di.label}</div>
         <div class="p-prog">${makeDots(p.checklist)}</div>
@@ -674,6 +748,8 @@ function renderBands(containerId,stages,props){
 function render(){
   DATA=buildData();
   const s=DATA.settings||{};
+  setCustom(s);
+  renderFlagLegend();
   applyTheme(s);
   document.documentElement.classList.toggle('hide-neg',s.showNegotiators===false);
   const name=s.agencyName||'Castle Estates';
@@ -687,8 +763,8 @@ function render(){
       document.getElementById(id).innerHTML=msg?'<div class="empty-msg">'+msg+'</div>':'';
     });
   }else{
-    renderBands('let-bands',LS,props.filter(p=>p.pipeline==='lettings'));
-    renderBands('sal-bands',SS,props.filter(p=>p.pipeline==='sales'));
+    renderBands('let-bands',stagesFor('lettings'),props.filter(p=>p.pipeline==='lettings'));
+    renderBands('sal-bands',stagesFor('sales'),props.filter(p=>p.pipeline==='sales'));
   }
   document.getElementById('let-ct').textContent=props.filter(p=>p.pipeline==='lettings').length;
   document.getElementById('sal-ct').textContent=props.filter(p=>p.pipeline==='sales').length;
@@ -716,7 +792,8 @@ function openCard(id){
   openId=id;
   const isLet=p.pipeline==='lettings';
   const di=dayInfo(p);
-  const stage=stagesFor(p.pipeline).find(s=>s.slug===p.stage)||{label:p.stage,colour:'#8b949e'};
+  const stage=stageOf(p.pipeline,p.stage)||{label:p.stage,colour:'grey'};
+  const mv=moveInfo(p);
   const labels=isLet?CL:CS;
   const cl=p.checklist||Array(7).fill(false);
   const doneCount=cl.filter(Boolean).length;
@@ -727,9 +804,9 @@ function openCard(id){
   const daysTxt=di.cls==='done'?'✓ Complete':di.days===0?'Entered stage today':di.days+'d in stage';
   document.getElementById('card-meta').innerHTML=`
     <span class="card-badge ${isLet?'cb-let':'cb-sale'}">${isLet?'🏠 Lettings':'🏷 Sales'}</span>
-    <span class="card-badge" style="background:${stage.colour}22;color:${stage.colour};border-color:${stage.colour}55">${esc(stage.label)}</span>
+    <span class="card-badge cb-stage c-${colourKey(stage.colour)}">${esc(stage.label)}</span>
     <span class="card-badge cb-price">${esc(p.price||'–')}</span>
-    <span class="card-badge cb-days ${di.cls}">${daysTxt}</span>`;
+    <span class="card-badge cb-days ${di.cls}">${daysTxt}</span>${mv?`<span class="card-badge cb-move ${mv.cls}">${esc(mv.txt)}</span>`:''}`;
 
   const n=negFor(p);
   const negHtml=`
@@ -765,11 +842,11 @@ function openCard(id){
     </div>`;
   document.getElementById('card-col-left').innerHTML=negHtml+stepsHtml;
 
-  const flags=FLAG_ORDER.filter(f=>(p.flags||[]).includes(f));
+  const flags=activeFlags(p.flags);
   const flagsHtml=flags.length?`
     <div class="card-section">
       <div class="cs-title">Flags</div>
-      <div class="card-flags">${flags.map(f=>`<span class="card-flag-pill ${f}">${FLAG_LABELS_LONG[f]}</span>`).join('')}</div>
+      <div class="card-flags">${flags.map(f=>`<span class="card-flag-pill c-${colourKey(f.colour)}">${esc(flagLong(f))}</span>`).join('')}</div>
     </div>`:'';
 
   const comp=p.compliance||{};
@@ -841,6 +918,7 @@ function tickScroll(){
 /* ── INIT ──────────────────────────────────────────────────────────────── */
 setupAutoScroll('let-bands');
 setupAutoScroll('sal-bands');
+injectPalette('both');
 updateClock();
 setInterval(updateClock,10000);
 setInterval(render,60000);           // keeps day counts right past midnight
