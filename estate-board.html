@@ -318,9 +318,9 @@
     </div>
     <div class="legend">
       <span>Compliance:</span>
-      <div class="li"><div class="cdot ok"></div>Valid</div>
-      <div class="li"><div class="cdot warn"></div>Expiring</div>
-      <div class="li"><div class="cdot bad"></div>Missing / Expired</div>
+      <div class="li"><div class="cdot ok"></div>Done</div>
+      
+      <div class="li"><div class="cdot bad"></div>Missing</div>
       <div class="li"><div class="cdot na"></div>Not yet due / N/A</div>
     </div>
     <div>Days in stage &nbsp;·&nbsp; <span style="color:var(--yellow)">amber 14d+</span> &nbsp;·&nbsp; <span style="color:var(--red)">red 28d+</span></div>
@@ -392,11 +392,11 @@ const COMPLETE_STAGES=['let','sold'];
 const FLAG_ORDER=['urgent','blocked','await','delayed'];
 const COMP={
   lettings:[
-    {key:'gas',     label:'Gas Safety Certificate',        expiry:true, na:true, from:'available'},
-    {key:'epc',     label:'EPC',                           expiry:true, na:false,from:'available'},
-    {key:'eicr',    label:'EICR',                          expiry:true, na:false,from:'available'},
+    {key:'gas',     label:'Gas Safety Certificate',        expiry:false,na:true, from:'available'},
+    {key:'epc',     label:'EPC',                           expiry:false,na:false,from:'available'},
+    {key:'eicr',    label:'EICR',                          expiry:false,na:false,from:'available'},
     {key:'alarms',  label:'Smoke & CO alarms checked',     expiry:false,na:false,from:'available'},
-    {key:'licence', label:'Property licence',              expiry:true, na:true, from:'available'},
+    {key:'licence', label:'Property licence',              expiry:false,na:true, from:'available'},
     {key:'contract',label:'Landlord terms signed',         expiry:false,na:false,from:'available'},
     {key:'rtr',     label:'Right to Rent check',           expiry:false,na:false,from:'referencing'},
     {key:'htr',     label:'How to Rent guide served',      expiry:false,na:false,from:'move_pending'},
@@ -404,13 +404,13 @@ const COMP={
   ],
   sales:[
     {key:'contract',  label:'Vendor terms signed',  expiry:false,na:false,from:'available'},
-    {key:'epc',       label:'EPC',                  expiry:true, na:false,from:'available'},
+    {key:'epc',       label:'EPC',                  expiry:false,na:false,from:'available'},
     {key:'aml_seller',label:'Seller AML / ID check',expiry:false,na:false,from:'available'},
     {key:'aml_buyer', label:'Buyer AML / ID check', expiry:false,na:false,from:'sstc'},
   ]
 };
 const COMP_TONE={ok:'ok',expiring:'warn',expired:'bad',missing:'bad',nodate:'bad',pending:'na',na:'na'};
-const COMP_LABEL={ok:'Valid',expiring:'Expiring soon',expired:'Expired',missing:'Missing',nodate:'No expiry date',pending:'Not yet due',na:'N/A'};
+const COMP_LABEL={ok:'Done',expiring:'Expiring soon',expired:'Expired',missing:'Missing',nodate:'No expiry date',pending:'Not yet due',na:'N/A'};
 
 const pad=n=>String(n).padStart(2,'0');
 const parseYMD=s=>{const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(s||'');return m?new Date(+m[1],+m[2]-1,+m[3]):null;};
