@@ -70,7 +70,7 @@
   .p-bar.flash{animation:uf 2s ease-in-out infinite}
   .band-acc[class*=" c-"]{background:var(--c)}
   .flag-pill[class*=" c-"],.card-flag-pill[class*=" c-"]{background:var(--cbg);color:var(--ct);border:1px solid var(--cbd)}
-  .flag-pill{max-width:150px;overflow:hidden;text-overflow:ellipsis}
+  .flag-pill{max-width:92px;overflow:hidden;text-overflow:ellipsis}
   .card-badge.cb-stage{background:var(--cbg);color:var(--ct);border-color:var(--cbd)}
   .p-move{flex-shrink:0;margin-right:10px;font-size:9.5px;font-weight:600;padding:2px 7px;border-radius:4px;background:var(--border2);color:var(--muted);white-space:nowrap}
   .p-move.soon{background:rgba(210,153,34,.18);color:#e3b341}
@@ -149,11 +149,11 @@
   .cl-addr{flex:1;margin-right:10px}
   .cl-beds,.p-beds{width:38px;flex-shrink:0;margin-right:10px;text-align:center}
   .p-beds{font-size:11px;color:var(--text);font-variant-numeric:tabular-nums}
-  .cl-price{width:62px;flex-shrink:0;margin-right:10px;text-align:right}
+  .cl-price{width:86px;flex-shrink:0;margin-right:10px;text-align:right}
   .cl-days{width:34px;flex-shrink:0;margin-right:10px;text-align:right}
   .cl-prog{width:70px;flex-shrink:0;margin-right:10px;text-align:left}
   .cl-comp{width:84px;flex-shrink:0;margin-right:10px;text-align:left}
-  .cl-flag{width:150px;flex-shrink:0;text-align:left}
+  .cl-flag{width:92px;flex-shrink:0;text-align:left}
 
   /* BANDS */
   .bw{flex:1;overflow-y:auto;overflow-x:hidden}
@@ -180,7 +180,7 @@
   @keyframes uf{0%,100%{opacity:1}50%{opacity:.3}}
   .p-neg{width:24px;height:24px;border-radius:50%;background:var(--border2);border:.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:8.5px;font-weight:600;color:var(--muted);flex-shrink:0;margin-right:9px}
   .p-addr{flex:1;min-width:0;font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-right:10px}
-  .p-price{width:62px;flex-shrink:0;font-size:11px;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums;margin-right:10px}
+  .p-price{width:86px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;font-size:11px;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums;margin-right:10px}
   .p-days{width:34px;flex-shrink:0;font-size:10px;color:var(--dim);text-align:right;font-variant-numeric:tabular-nums;margin-right:10px}
   .p-days.warn{color:var(--yellow);font-weight:500}
   .p-days.danger{color:var(--red);font-weight:600}
@@ -196,7 +196,7 @@
   .cdot.warn{background:#d29922}
   .cdot.bad {background:#f85149}
   .cdot.na  {background:var(--border2);border:.5px solid var(--faint)}
-  .p-flag{width:150px;flex-shrink:0;display:flex;align-items:center}
+  .p-flag{width:92px;flex-shrink:0;display:flex;align-items:center}
   .flag-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:4px;font-size:9.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;white-space:nowrap;line-height:1.4}
   .flag-pill.urgent,.flag-pill.blocked{background:rgba(248,81,73,.18);color:#ff7b72;border:1px solid rgba(248,81,73,.35)}
   .flag-pill.await  {background:rgba(56,139,253,.18);color:#79c0ff;border:1px solid rgba(56,139,253,.35)}
@@ -318,16 +318,17 @@
   .p-prog{gap:3px}
   .p-comp,.cl-comp{width:100px}
   .p-comp{gap:3px}
+  .pp:has(#sal-bands) .p-comp,.pp:has(#sal-bands) .cl-comp{width:92px}
   .dot.off,.cdot.na,.comp-row-dot.na{background:#3d444d}
   html[data-theme="light"] .dot.off,html[data-theme="light"] .cdot.na,html[data-theme="light"] .comp-row-dot.na{background:#c3cad2}
 
   /* Line map: each row shows where it is in the pipeline */
-  .cl-addr{flex:0 1 217px;min-width:0}
-  .p-addrw{flex:0 1 220px;min-width:0;display:flex;align-items:center;margin-right:10px}
+  .cl-addr{flex:1 1 auto;min-width:0}
+  .p-addrw{flex:1 1 auto;min-width:0;display:flex;align-items:center;margin-right:10px}
   .p-addrw .p-addr{margin-right:0}
-  .cl-line{flex:1 0 160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0 14px 0 6px;padding-left:6px}
+  .cl-line{flex:0 1 210px;min-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0 14px 0 6px;padding-left:6px}
   .cl-line span{width:0;display:flex;justify-content:center;white-space:nowrap}
-  .p-line{flex:1 0 160px;position:relative;height:30px;margin:0 14px 0 6px;display:flex;justify-content:space-between;align-items:center;padding:0 20px}
+  .p-line{flex:0 1 210px;min-width:160px;position:relative;height:30px;margin:0 14px 0 6px;display:flex;justify-content:space-between;align-items:center;padding:0 20px}
   .p-line::before{content:"";position:absolute;left:20px;right:20px;top:14px;height:2px;background:var(--border)}
   .p-line::after{content:"";position:absolute;left:20px;top:13px;height:4px;border-radius:0;width:calc(5.5px + (100% - 45.5px) * var(--k));background:var(--c)}
   .ln-st{position:relative;z-index:1;width:8px;height:8px;border-radius:50%;background:var(--bg);border:2px solid var(--border);flex-shrink:0}
@@ -339,8 +340,7 @@
   html[data-theme="light"] .ln-here.warn b{background:#bf8700;border-color:#bf8700;color:#fff}
   html[data-theme="light"] .ln-here.danger b{background:#cf222e;border-color:#cf222e}
   .ln-here.done b{background:var(--c);color:#fff}
-  @media (max-width:1700px){.p-addrw{flex-basis:190px}.cl-addr{flex-basis:187px}.cl-flag,.p-flag{width:120px}}
-  @media (max-width:1500px){.cl-flag,.p-flag{width:96px}.p-line,.cl-line{margin-right:8px}}
+  @media (max-width:1500px){.cl-flag,.p-flag{width:86px}.p-line,.cl-line{margin-right:8px}}
   .pr:hover .ln-here b,.pr.is-new .ln-here b{box-shadow:0 0 0 3px var(--surface)}
 
   /* Castle stations on the line */
@@ -355,7 +355,7 @@
   .ln-here b i{width:7px;height:11px;background:currentColor;-webkit-mask:var(--rook) center/contain no-repeat;mask:var(--rook) center/contain no-repeat;flex-shrink:0}
   .ln-here.done b i{display:none}
   /* Compliance icons: red tile = missing, green = done, faint = not due yet / N/A */
-  .p-comp,.cl-comp{width:140px}
+  .p-comp,.cl-comp{width:136px}
   .p-comp{gap:3px}
   .ci{width:20px;height:20px;border-radius:5px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
   .ci svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
