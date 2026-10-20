@@ -395,6 +395,13 @@ table.pt tr.arc td{opacity:.5}
       <div class="btns"><button class="btn btn-primary btn-sm" onclick="saveSettings()">Save</button></div>
     </div>
     <div class="set-card">
+      <h3>Sales this year</h3>
+      <p>Shown on the board as "sales this year" (1 April to 31 March). Enter the sales completed this year before the board went live. Every sale moved to <strong>Sold</strong> on the board is added on automatically, and the count starts again on 1 April.</p>
+      <div class="fg"><label class="fl">Sales before the board went live <span class="hint" id="ytd-fy"></span></label><input class="fi" id="set-ytd" type="number" min="0" step="1" style="max-width:120px"></div>
+      <div class="set-meta" id="ytd-meta"></div>
+      <div class="btns"><button class="btn btn-primary btn-sm" onclick="saveYtd()">Save</button></div>
+    </div>
+    <div class="set-card">
       <h3>Backup</h3>
       <p>Everything is stored online and shared by the whole team. A monthly backup file is still worth keeping in case something is deleted by mistake.</p>
       <div class="set-meta">Last backup: <strong id="set-lastexp">never</strong></div>
@@ -647,6 +654,19 @@ function compSummary(p,compOverride,stageOverride){
   });
   return r;
 }
+
+// Sales year to date (UK financial year, 1 April to 31 March).
+// = the figure entered in Settings for sales before the board went live this year
+//   + sales properties moved to Sold on the board since 1 April (archived ones still count).
+function fyStart(d){d=d||new Date();const y=d.getMonth()>=3?d.getFullYear():d.getFullYear()-1;return y+'-04-01';}
+function ytdSales(data){
+  const fy=fyStart(),t=ymd2(new Date());
+  const s=(data&&data.settings)||{};
+  const base=s.ytdBaseFrom===fy?(parseInt(s.ytdBase,10)||0):0;
+  const onBoard=((data&&data.properties)||[]).filter(p=>p.pipeline==='sales'&&p.stage==='sold'&&p.enteredStageAt>=fy&&p.enteredStageAt<=t).length;
+  return{base,onBoard,total:base+onBoard,fy};
+}
+function ymd2(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 /* ── END SHARED ────────────────────────────────────────────────────────── */
 
 const COLOURS=[
@@ -1280,18 +1300,30 @@ function renderSettings(){
   const d=getData();
   document.getElementById('set-name').value=d.settings.agencyName||'';
   document.getElementById('set-tag').value=d.settings.agencyTagline||'';
+  const yt=ytdSales(d);
+  document.getElementById('set-ytd').value=yt.base;
   renderSettingsMeta();
 }
 // Parts of the settings page that can refresh without touching what someone is typing
 function renderSettingsMeta(){
   const d=getData();
   renderThemeToggle(d.settings.boardTheme);
+  renderYtdMeta();
   document.getElementById('set-lastexp').textContent=d.settings.lastExport?fmtDate(d.settings.lastExport):'never';
   document.getElementById('btn-demo').disabled=d.properties.length>0||d.negotiators.length>0;
   document.querySelectorAll('.owner-only').forEach(el=>{if(el.id!=='card-local')el.style.display=isOwner()?'':'none';});
   const legacy=isOwner()?readLegacy():null;
   document.getElementById('card-local').style.display=legacy?'':'none';
   if(legacy)document.getElementById('local-txt').textContent=`This browser still holds ${legacy.properties.length} properties from the old single-PC version. Move them to the shared board so everyone can see them.`;
+}
+function renderYtdMeta(){
+  const yt=ytdSales(getData());
+  document.getElementById('ytd-fy').textContent='since '+yt.fy.split('-').reverse().join('/');
+  document.getElementById('ytd-meta').innerHTML=`Board shows <strong>${yt.total}</strong>: ${yt.base} entered here + ${yt.onBoard} marked Sold on the board.`;
+}
+function saveYtd(){
+  const v=Math.max(0,parseInt(document.getElementById('set-ytd').value,10)||0);
+  commit(sDoc().set({ytdBase:v,ytdBaseFrom:fyStart()},{merge:true}),'Sales this year saved ✓');
 }
 function renderThemeToggle(t){
   document.getElementById('th-dark').className='popt'+(t!=='light'?' aL':'');

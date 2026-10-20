@@ -274,7 +274,7 @@
     <div class="pp">
       <div class="ph">
         <div class="ph-title">Sales Pipeline</div>
-        <div class="ph-count"><b id="sal-ct">–</b> active properties</div>
+        <div class="ph-count"><b id="sal-ct">–</b> active properties &nbsp;·&nbsp; <b id="sal-ytd">–</b> sales this year</div>
       </div>
       <div class="cl-row">
         <div class="cl-bar"></div>
@@ -430,6 +430,19 @@ function currentStep(cl){
   if(!c.some(Boolean))return -1;
   return c.findIndex(x=>!x);
 }
+
+// Sales year to date (UK financial year, 1 April to 31 March).
+// = the figure entered in Settings for sales before the board went live this year
+//   + sales properties moved to Sold on the board since 1 April (archived ones still count).
+function fyStart(d){d=d||new Date();const y=d.getMonth()>=3?d.getFullYear():d.getFullYear()-1;return y+'-04-01';}
+function ytdSales(data){
+  const fy=fyStart(),t=ymd2(new Date());
+  const s=(data&&data.settings)||{};
+  const base=s.ytdBaseFrom===fy?(parseInt(s.ytdBase,10)||0):0;
+  const onBoard=((data&&data.properties)||[]).filter(p=>p.pipeline==='sales'&&p.stage==='sold'&&p.enteredStageAt>=fy&&p.enteredStageAt<=t).length;
+  return{base,onBoard,total:base+onBoard,fy};
+}
+function ymd2(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 /* ── END SHARED ────────────────────────────────────────────────────────── */
 
 const NEG_COLOURS=[
@@ -658,6 +671,9 @@ function render(){
   }
   document.getElementById('let-ct').textContent=props.filter(p=>p.pipeline==='lettings').length;
   document.getElementById('sal-ct').textContent=props.filter(p=>p.pipeline==='sales').length;
+  const yt=ytdSales(DATA);
+  document.getElementById('sal-ytd').textContent=yt.total;
+  document.getElementById('sal-ytd').parentNode.title='Sales completed since '+yt.fy.split('-').reverse().join('/')+' (financial year)';
   document.getElementById('last-upd').textContent=LAST_SYNC?'Last change received: '+pad(LAST_SYNC.getHours())+':'+pad(LAST_SYNC.getMinutes())+':'+pad(LAST_SYNC.getSeconds()):'';
   // Keep an open card in step with the latest data
   if(openId){
