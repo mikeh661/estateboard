@@ -81,13 +81,11 @@
   html[data-theme="light"] .p-move.soon,html[data-theme="light"] .card-badge.cb-move.soon{background:#fff8c5;color:#9a6700;border-color:#f5e0a0}
   html[data-theme="light"] .p-move.late,html[data-theme="light"] .card-badge.cb-move.late{background:#ffebe9;color:#cf222e;border-color:#ffcecb}
 
-  /* Status heading rows filled with the status colour */
-  .band-hdr[class*=" c-"]{background:var(--c);height:30px;padding-left:14px;border-bottom:none}
+  /* Status heading rows: soft tint of the status colour with a coloured edge */
+  .band-hdr[class*=" c-"]{height:30px;background:linear-gradient(var(--cbg),var(--cbg)),var(--bg);border-left:4px solid var(--c);padding-left:10px}
   .band-hdr[class*=" c-"] .band-acc{display:none}
-  .band-hdr[class*=" c-"] .band-name{color:#0d1117;font-size:10.5px;font-weight:700}
-  .band-hdr[class*=" c-"] .band-cnt{background:rgba(0,0,0,.2);color:#0d1117;font-weight:700}
-  html[data-theme="light"] .band-hdr[class*=" c-"] .band-name{color:#fff}
-  html[data-theme="light"] .band-hdr[class*=" c-"] .band-cnt{background:rgba(255,255,255,.25);color:#fff}
+  .band-hdr[class*=" c-"] .band-name{color:var(--ct);font-weight:700;font-size:10.5px}
+  .band-hdr[class*=" c-"] .band-cnt{background:var(--cbd);color:var(--ct);font-weight:700}
 
   /* PANELS */
   #panels{display:flex;flex:1;overflow:hidden}
