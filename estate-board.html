@@ -435,6 +435,16 @@
   html[data-theme="light"] .ln-here.danger b{color:#cf222e}html[data-theme="light"] .ln-here.danger i{background:#cf222e}
   .ln-here.done b{color:var(--ct)}
   .pr .ln-here b,.pr .ln-here.warn b,.pr .ln-here.danger b,.pr .ln-here.done b{background:none!important;border:none!important;box-shadow:none!important;padding:0!important;min-width:0!important;height:auto!important;top:1px;font-size:10.5px}
+
+  /* Lettings: days only, no progress line */
+  .cl-dcol{width:52px;flex-shrink:0;margin:0 14px 0 6px;text-align:center}
+  .p-dcol{width:52px;flex-shrink:0;margin:0 14px 0 6px;text-align:center;font-size:12px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums}
+  .p-dcol.warn{color:#e3b341}
+  .p-dcol.danger{color:#fff;background:#f85149;border-radius:9px;padding:1px 0}
+  .p-dcol.done{color:var(--greenb,#3fb950)}
+  html[data-theme="light"] .p-dcol.warn{color:#9a6700}
+  html[data-theme="light"] .p-dcol.danger{background:#cf222e}
+  html[data-theme="light"] .p-dcol.done{color:#1a7f37}
 </style>
 </head>
 <body>
@@ -475,7 +485,7 @@
         <div class="cl cl-addr">Address</div>
         <div class="cl cl-beds">Beds</div>
         <div class="cl cl-price">Rent/mo</div>
-        <div class="cl cl-line">Progress · days in status</div>
+        <div class="cl cl-dcol">Days</div>
         <div class="cl cl-comp">Compliance</div>
         <div class="cl cl-flag">Flag</div>
       </div>
@@ -493,7 +503,7 @@
         <div class="cl cl-addr">Address</div>
         <div class="cl cl-beds">Beds</div>
         <div class="cl cl-price">Asking</div>
-        <div class="cl cl-line">Progress · days in status</div>
+        <div class="cl cl-line">Progress · days</div>
         <div class="cl cl-comp">Compliance</div>
         <div class="cl cl-flag">Flag</div>
       </div>
@@ -955,6 +965,7 @@ function negFor(p){
 }
 
 function makeLine(p,di,stage){
+  if(p.pipeline==='lettings')return `<div class="p-dcol ${di.cls}">${di.label}</div>`;
   const st=stagesFor(p.pipeline);const i=Math.max(0,stageIdx(p.pipeline,p.stage));const n=st.length;
   const k=n>1?i/(n-1):0;
   const parts=st.map((s,j)=>j===i?`<div class="ln-here ${di.cls}"><b>${di.label}</b><i></i></div>`:`<div class="ln-st${j<i?' past':''}" title="${esc(s.label)}"></div>`).join('');
@@ -1011,7 +1022,7 @@ function flagCell(flags){
 }
 
 function renderBands(containerId,stages,props){
-  {const n=Math.max(stagesFor('lettings').length,stagesFor('sales').length);document.documentElement.style.setProperty('--n',n);}
+  {const n=stagesFor('sales').length;document.documentElement.style.setProperty('--n',n);}
   const el=document.getElementById(containerId);
   let html='';
   stages.forEach(stage=>{
