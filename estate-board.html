@@ -323,12 +323,12 @@
   html[data-theme="light"] .dot.off,html[data-theme="light"] .cdot.na,html[data-theme="light"] .comp-row-dot.na{background:#c3cad2}
 
   /* Line map: each row shows where it is in the pipeline */
-  .cl-addr{flex:1 1 auto;min-width:0}
-  .p-addrw{flex:1 1 auto;min-width:0;display:flex;align-items:center;margin-right:10px}
+  .cl-addr{flex:1 1 0;min-width:0}
+  .p-addrw{flex:1 1 0;min-width:0;display:flex;align-items:center;margin-right:10px}
   .p-addrw .p-addr{margin-right:0}
-  .cl-line{flex:0 1 calc(var(--n,6) * 41px + 30px);min-width:calc(var(--n,6) * 34px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0 14px 0 6px;padding-left:6px}
+  .cl-line{flex:0 0 calc(var(--n,6) * var(--sp) + 30px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0 14px 0 6px;padding-left:6px}
   .cl-line span{width:0;display:flex;justify-content:center;white-space:nowrap}
-  .p-line{flex:0 1 calc(var(--n,6) * 41px + 30px);min-width:calc(var(--n,6) * 34px);position:relative;height:30px;margin:0 14px 0 6px;display:flex;justify-content:space-between;align-items:center;padding:0 20px}
+  .p-line{flex:0 0 calc(var(--n,6) * var(--sp) + 30px);position:relative;height:30px;margin:0 14px 0 6px;display:flex;justify-content:space-between;align-items:center;padding:0 20px}
   .p-line::before{content:"";position:absolute;left:20px;right:20px;top:14px;height:2px;background:var(--border)}
   .p-line::after{content:"";position:absolute;left:20px;top:13px;height:4px;border-radius:0;width:calc(5.5px + (100% - 45.5px) * var(--k));background:var(--c)}
   .ln-st{position:relative;z-index:1;width:8px;height:8px;border-radius:50%;background:var(--bg);border:2px solid var(--border);flex-shrink:0}
@@ -375,6 +375,49 @@
   .ikey .ci{width:16px;height:16px;border-radius:4px;color:var(--muted);background:var(--border2)}
   .ikey .ci svg{width:11px;height:11px}
   .comp-row-item .ci{width:22px;height:22px}
+
+  /* Size control (per screen) */
+  .size-ctl{display:inline-flex;align-items:center;height:28px;border-radius:14px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.08);overflow:hidden;margin-right:8px}
+  .size-ctl button{height:100%;border:none;background:none;color:#fff;font-family:inherit;font-size:12px;font-weight:600;padding:0 10px;cursor:pointer}
+  .size-ctl button:hover{background:rgba(255,255,255,.16)}
+  .size-ctl button:disabled{opacity:.35;cursor:default;background:none}
+  .size-ctl #size-lbl{font-size:11px;font-weight:500;min-width:44px;padding:0 4px;border-left:1px solid rgba(255,255,255,.2);border-right:1px solid rgba(255,255,255,.2)}
+  #board.scaled{transform-origin:0 0}
+
+  /* Compact layouts for smaller screens (works per panel, and with the size buttons) */
+  .pp{container-type:inline-size;--sp:41px}
+  .fp-i{flex-shrink:0}
+  @container (max-width:900px){
+    .pp *{--sp:36px}
+    .cl-flag,.p-flag{width:30px}
+    .cl-flag{font-size:0}
+    .flag-pill{padding:2px 5px;max-width:30px}
+    .fp-t,.flag-more{display:none}
+    .p-comp,.cl-comp{width:118px}
+    .pp:has(#sal-bands) .p-comp,.pp:has(#sal-bands) .cl-comp{width:80px}
+    .ci{width:17px;height:17px;border-radius:4px}
+    .ci svg{width:12px;height:12px}
+    .p-comp{gap:3px}
+    .cl-price,.p-price{width:74px}
+    .cl-beds,.p-beds{width:28px;margin-right:6px}
+    .ln-here b{min-width:30px;font-size:10px;height:18px}
+    .p-addr{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.15;font-size:11.5px;word-break:break-word}
+  }
+  @container (max-width:720px){
+    .pp *{--sp:32px}
+    .p-comp,.cl-comp{width:104px}
+    .pp:has(#sal-bands) .p-comp,.pp:has(#sal-bands) .cl-comp{width:70px}
+    .ci{width:15px;height:15px}
+    .ci svg{width:11px;height:11px}
+    .p-comp{gap:2px}
+    .cl-price,.p-price{width:64px}
+    .p-price{font-size:10px}
+    .ln-here b{min-width:28px;font-size:9.5px;padding:0 4px}
+    .p-line,.cl-line{margin-right:8px}
+    .pp *{--sp:30px}
+    .ln-st{width:9px!important;height:14px!important;margin-top:-3px}
+    .p-addr{font-size:11px}
+  }
 </style>
 </head>
 <body>
@@ -386,6 +429,11 @@
       <span id="clk-d">Loading…</span>
     </div>
     <div class="hdr-right">
+      <div class="size-ctl" title="Board size on this screen (keys - + 0)">
+        <button id="size-dn" onclick="changeSize(-1)" aria-label="Smaller">A&minus;</button>
+        <button id="size-lbl" onclick="changeSize(0)" title="Back to 100%">100%</button>
+        <button id="size-up" onclick="changeSize(1)" aria-label="Bigger">A+</button>
+      </div>
       <button id="theme-btn" class="theme-btn" onclick="toggleTheme()" title="Switch light / dark (T)">
         <span class="ti ti-sun">☀️</span><span class="ti ti-moon">🌙</span><span id="theme-lbl">Light</span>
       </button>
@@ -802,8 +850,8 @@ function renderNewStrip(){
 function sizeStrip(){
   const move=document.getElementById('ns-move'),track=move&&move.parentNode;
   if(!move||!move.innerHTML)return;
-  const tw=track.getBoundingClientRect().width||window.innerWidth;
-  const cw=move.getBoundingClientRect().width||800;
+  const tw=track.offsetWidth||window.innerWidth;
+  const cw=move.offsetWidth||800;
   move.style.setProperty('--from',tw+'px');
   move.style.setProperty('--to',(-cw)+'px');
   move.style.setProperty('--dur',Math.max(10,(tw+cw)/90)+'s');   // about 90 pixels a second
@@ -942,11 +990,11 @@ function flagCell(flags){
   const on=activeFlags(flags),f=on[0];
   if(!f)return'<div class="p-flag"></div>';
   const extra=on.length-1;
-  return`<div class="p-flag"><span class="flag-pill c-${colourKey(f.colour)}" title="${esc(on.map(x=>x.label).join(', '))}">${esc(flagShort(f))}</span>${extra>0?`<span class="flag-more">+${extra}</span>`:''}</div>`;
+  return`<div class="p-flag"><span class="flag-pill c-${colourKey(f.colour)}" title="${esc(on.map(x=>x.label).join(', '))}"><span class="fp-i">${esc(f.icon||'⚑')}</span><span class="fp-t">${esc(f.short||f.label)}</span></span>${extra>0?`<span class="flag-more">+${extra}</span>`:''}</div>`;
 }
 
 function renderBands(containerId,stages,props){
-  {const bw=document.getElementById(containerId);const pp=bw&&bw.closest('.pp');if(pp)pp.style.setProperty('--n',stages.length);}
+  {const n=Math.max(stagesFor('lettings').length,stagesFor('sales').length);document.documentElement.style.setProperty('--n',n);}
   const el=document.getElementById(containerId);
   let html='';
   stages.forEach(stage=>{
@@ -1176,8 +1224,35 @@ keepAwake();
   auth=firebase.auth();db=firebase.firestore();
   auth.onAuthStateChanged(u=>{onAuth(u).catch(e=>{console.error(e);authNote='Something went wrong: '+friendly(e);showLogin();});});
 })();
+
+/* ── Board size: remembered on each screen, so the TV and a PC can differ. ?size=120 in the address forces it ── */
+const SIZE_MIN=70,SIZE_MAX=160,SIZE_STEP=10;
+let SIZE=100;
+(function(){
+  const q=parseInt(new URLSearchParams(location.search).get('size'),10);
+  let v=NaN;try{v=parseInt(localStorage.getItem('eb-size'),10);}catch(e){}
+  SIZE=!isNaN(q)?q:(!isNaN(v)?v:100);
+  SIZE=Math.min(SIZE_MAX,Math.max(SIZE_MIN,SIZE));
+})();
+function applySize(){
+  const b=document.getElementById('board');if(!b)return;
+  const z=SIZE/100;
+  if(z===1){b.classList.remove('scaled');b.style.transform='';b.style.width='';b.style.height='';}
+  else{b.classList.add('scaled');b.style.width=(100/z)+'vw';b.style.height=(100/z)+'vh';b.style.transform='scale('+z+')';}
+  const l=document.getElementById('size-lbl');if(l)l.textContent=SIZE+'%';
+  const dn=document.getElementById('size-dn'),up=document.getElementById('size-up');
+  if(dn)dn.disabled=SIZE<=SIZE_MIN;if(up)up.disabled=SIZE>=SIZE_MAX;
+  try{if(document.getElementById('new-strip').classList.contains('show'))sizeStrip();}catch(e){}
+}
+function changeSize(d){
+  SIZE=d===0?100:Math.min(SIZE_MAX,Math.max(SIZE_MIN,SIZE+d*SIZE_STEP));
+  try{localStorage.setItem('eb-size',String(SIZE));}catch(e){}
+  applySize();
+}
+document.addEventListener('DOMContentLoaded',applySize);
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape')closeCard();
+  if(!e.ctrlKey&&!e.metaKey&&!e.altKey&&!/INPUT|TEXTAREA|SELECT/.test((e.target.tagName||''))){if(e.key==='-'||e.key==='_')changeSize(-1);else if(e.key==='+'||e.key==='=')changeSize(1);else if(e.key==='0')changeSize(0);}
   if((e.key==='t'||e.key==='T')&&!e.ctrlKey&&!e.metaKey&&!e.altKey)toggleTheme();
 });
 </script>
