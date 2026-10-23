@@ -445,6 +445,23 @@
   html[data-theme="light"] .p-dcol.warn{color:#9a6700}
   html[data-theme="light"] .p-dcol.danger{background:#cf222e}
   html[data-theme="light"] .p-dcol.done{color:#1a7f37}
+
+  /* Fees (sales): amber tile = owed, green = paid */
+  .cl-fees,.p-fees{width:88px;flex-shrink:0;margin-right:10px}
+  .p-fees{display:flex;align-items:center;gap:3px}
+  .fi{width:19px;height:19px;border-radius:5px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .fi svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .fi.due{background:#d29922;color:#1b1500}
+  .fi.paid{color:#3fb950}
+  html[data-theme="light"] .fi.due{background:#bf8700;color:#fff}
+  html[data-theme="light"] .fi.paid{color:#1a7f37}
+  .fee-row{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;color:var(--text)}
+  .fee-row .fi{width:22px;height:22px}
+  .fee-row .fst{margin-left:auto;font-size:11px;font-weight:600}
+  .fee-row .fst.due{color:#e3b341}.fee-row .fst.paid{color:#3fb950}
+  html[data-theme="light"] .fee-row .fst.due{color:#9a6700}html[data-theme="light"] .fee-row .fst.paid{color:#1a7f37}
+  @container (max-width:900px){.cl-fees,.p-fees{width:76px}.fi{width:17px;height:17px}.fi svg{width:12px;height:12px}}
+  @container (max-width:720px){.cl-fees,.p-fees{width:66px}.p-fees{gap:2px}.fi{width:15px;height:15px}.fi svg{width:11px;height:11px}}
 </style>
 </head>
 <body>
@@ -505,6 +522,7 @@
         <div class="cl cl-price">Asking</div>
         <div class="cl cl-line">Progress · days</div>
         <div class="cl cl-comp">Compliance</div>
+        <div class="cl cl-fees">Fees</div>
         <div class="cl cl-flag">Flag</div>
       </div>
       <div class="bw" id="sal-bands"></div>
@@ -520,8 +538,8 @@
       <div class="li"><div class="ci bad ci-sm"><svg viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></svg></div>Missing</div>
       <div class="li"><div class="ci ok ci-sm"><svg viewBox="0 0 16 16"><path d="m3.5 8.3 3 3 6-6.6"/></svg></div>Done</div>
       <div class="ikey" id="icon-key"></div>
+      <div class="ikey" id="fee-key"></div>
     </div>
-    <div>Days in stage &nbsp;·&nbsp; <span style="color:var(--yellow)">amber 14d+</span> &nbsp;·&nbsp; <span style="color:var(--red)">red 28d+</span></div>
     <div class="foot-r"><span id="last-upd">–</span><span id="foot-who"></span><button class="foot-link" onclick="signOutBoard()">Sign out</button></div>
   </div>
 </div>
@@ -592,6 +610,16 @@ const COMP={
 const COMP_TONE={ok:'ok',expiring:'warn',expired:'bad',missing:'bad',nodate:'bad',pending:'na',na:'na'};
 const COMP_LABEL={ok:'Done',expiring:'Expiring soon',expired:'Expired',missing:'Missing',nodate:'No expiry date',pending:'Not yet due',na:'N/A'};
 
+
+/* Sales prices shown in thousands: 230000 or £230,000 → £230K, 1250000 → £1.25M. Lettings unchanged. */
+function showPrice(p){
+  const s=String(p&&p.price||'').trim();
+  if(!s)return'–';
+  if(!p||p.pipeline!=='sales')return s;
+  const k=n=>{if(n>=1e6){return'£'+(+(n/1e6).toFixed(2))+'M';}if(n>=1000){return'£'+(+(n/1000).toFixed(1))+'K';}return'£'+n;};
+  return s.replace(/(£\s?)?(\d{1,3}(?:,\d{3})+|\d{4,})(?:\.\d+)?(?!\s*[kKmM\d])/g,(m,c,num)=>{const n=Number(num.replace(/,/g,''));return n>=10000?k(n):m;})
+          .replace(/(£\s?)?(\d+(?:\.\d+)?)\s*([kKmM])\b/g,(m,c,num,u)=>'£'+num+u.toUpperCase());
+}
 const pad=n=>String(n).padStart(2,'0');
 const parseYMD=s=>{const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(s||'');return m?new Date(+m[1],+m[2]-1,+m[3]):null;};
 const midnight=()=>{const d=new Date();d.setHours(0,0,0,0);return d;};
@@ -834,7 +862,7 @@ async function onAuth(u){
   }
   ME={uid:u.uid,email,name:(prof&&prof.name)||email,role};
   document.getElementById('auth').classList.add('hide');
-  document.getElementById('foot-who').textContent='Signed in: '+ME.name;
+  document.getElementById('foot-who').textContent=ME.name;
   setLive('warn','Connecting…');
   const fail=e=>{
     console.error(e);
@@ -864,7 +892,7 @@ function renderNewStrip(){
   const on=s.newStrip!==false&&items.length>0&&LOADED;
   strip.classList.toggle('show',on);
   if(!on){_stripKey='';move.innerHTML='';return;}
-  const parts=items.map(p=>`<span class="ns-item"><b>${esc(p.displayAddr)}</b> · ${p.pipeline==='sales'?'For sale':'To let'}${p.price?' · '+esc(p.price):''}</span>`);
+  const parts=items.map(p=>`<span class="ns-item"><b>${esc(p.displayAddr)}</b> · ${p.pipeline==='sales'?'For sale':'To let'}${p.price?' · '+esc(showPrice(p)):''}</span>`);
   const msg=String(s.newMessage==null?'Please prioritise viewings':s.newMessage).trim();
   if(msg)parts.push(`<span class="ns-item ns-msg">${esc(msg)}</span>`);
   const html=`<span class="ns-badge">JUST IN</span>${parts.join('<span class="ns-sep">•</span>')}`;
@@ -895,7 +923,7 @@ function compTones(p){const comp=p.compliance||{};return(COMP[p.pipeline]||[]).m
 function computeAnim(props,s){
   const cur={};
   props.forEach(p=>{cur[p.id]={
-    sig:JSON.stringify([p.stage,p.pipeline,p.price,p.displayAddr,p.flags,p.checklist,p.compliance,p.boardNote,p.beds,p.moveDate,p.newUntil,p.negotiatorId]),
+    sig:JSON.stringify([p.stage,p.pipeline,p.price,p.displayAddr,p.flags,p.checklist,p.compliance,p.boardNote,p.beds,p.moveDate,p.newUntil,p.negotiatorId,p.fees]),
     stage:p.stage,pl:p.pipeline,cl:(p.checklist||[]).map(Boolean),tones:compTones(p)};});
   ANIM={added:new Set(),changed:new Set(),prog:{},comp:{}};
   if(PREV&&animOn(s)){
@@ -940,7 +968,7 @@ function nextCeleb(){
 }
 
 function renderFlagLegend(){
-  {const k=document.getElementById('icon-key');if(k)k.innerHTML=iconKey();}const el=document.getElementById('flag-legend');if(!el)return;
+  {const k=document.getElementById('icon-key');if(k)k.innerHTML=iconKey();const fk=document.getElementById('fee-key');if(fk)fk.innerHTML='<span style="margin-left:6px">Fees:</span><div class="li"><div class="fi due ci-sm" style="width:16px;height:16px">'+feeIcon('commission')+'</div>Due</div><div class="li"><div class="fi paid ci-sm" style="width:16px;height:16px">'+feeIcon('commission')+'</div>Paid</div>'+FEES.map(d=>'<div class="li"><div class="ci">'+feeIcon(d.key)+'</div>'+d.short+'</div>').join('');}const el=document.getElementById('flag-legend');if(!el)return;
   el.innerHTML=flagList().map(f=>`<div class="li"><div class="lb c-${colourKey(f.colour)}" style="background:var(--c)"></div>${esc(f.label)}</div>`).join('');
 }
 function renderSoon(){if(_rs)return;_rs=setTimeout(()=>{_rs=null;render();},0);}
@@ -1004,6 +1032,37 @@ function iconKey(){
   ['lettings','sales'].forEach(pl=>(COMP[pl]||[]).forEach(d=>{if(!seen[d.key]){seen[d.key]=1;items.push(d);}}));
   return items.map(d=>`<div class="li"><div class="ci">${compIcon(d.key)}</div>${esc(CI_SHORT[d.key]||d.label)}</div>`).join('');
 }
+
+/* ── FEES (sales only): just whether each fee has been paid, no amounts ──
+   Stored on the property as fees:{commission,solicitor,survey,mortgage}
+   Values: '' = no fee / not set, 'due' = owed, 'paid' = received.
+   Commission counts as due from the second sales status onwards unless marked paid. */
+const FEES=[
+  {key:'commission',label:'Sales commission', short:'Commission',auto:true},
+  {key:'solicitor', label:'Solicitor referral',short:'Solicitor'},
+  {key:'survey',    label:'Survey referral',   short:'Survey'},
+  {key:'mortgage',  label:'Mortgage referral', short:'Mortgage'}
+];
+function feeState(p,key){
+  const f=(p.fees||{})[key]||'';
+  if(f==='paid'||f==='due'||f==='none')return f==='none'?'':f;
+  const def=FEES.find(x=>x.key===key);
+  if(def&&def.auto&&p.pipeline==='sales'&&stageIdx('sales',p.stage)>=1)return'due';
+  return'';
+}
+const FI={
+  commission:'<path d="M10.8 4.2A2.8 2.8 0 0 0 5.6 5.6c0 1.6.6 2.6.6 4.2 0 1.4-.6 2.4-1.7 3.2h7.3M4.3 9h5.2" />',
+  solicitor:'<path d="M8 2.2v11.2M4.6 13.6h6.8M3 4.4h10M8 3.2l0 0M3 4.4 1.4 8.6a1.9 1.9 0 0 0 3.2 0zM13 4.4l-1.6 4.2a1.9 1.9 0 0 0 3.2 0z"/>',
+  survey:'<circle cx="7" cy="7" r="4.2"/><path d="m10.1 10.1 3.6 3.6"/>',
+  mortgage:'<path d="M2.2 7.4 8 2.6l5.8 4.8"/><path d="M3.8 6.2v7.2h8.4V6.2"/><path d="M6.6 13.4V10h2.8v3.4"/>'
+};
+function feeIcon(key){return`<svg viewBox="0 0 16 16">${FI[key]||''}</svg>`;}
+function makeFees(p){
+  if(p.pipeline!=='sales')return'';
+  return FEES.map(d=>{const st=feeState(p,d.key);
+    if(!st)return'<div class="fi blank"></div>';
+    return`<div class="fi ${st}" title="${esc(d.label)}: ${st==='paid'?'Paid':'Due'}">${feeIcon(d.key)}</div>`;}).join('');
+}
 function makeCompDots(p){
   const comp=p.compliance||{},fills=ANIM.comp[p.id];
   return (COMP[p.pipeline]||[]).map((def,i)=>{
@@ -1051,9 +1110,9 @@ function renderBands(containerId,stages,props){
         <div class="p-neg"${negStyle} title="${esc(n.name)}">${esc(String(n.initials).substr(0,2))}</div>
         <div class="p-addrw"><div class="p-addr" title="${esc(p.displayAddr)}">${esc(p.displayAddr)}</div>${isNew(p)?'<div class="new-tag">NEW</div>':''}${mv?`<div class="p-move ${mv.cls}">${esc(mv.txt)}</div>`:''}</div>
         <div class="p-beds">${bedsLabel(p)}</div>
-        <div class="p-price">${esc(p.price||'–')}</div>
+        <div class="p-price">${esc(showPrice(p))}</div>
         ${makeLine(p,di,stage)}
-        <div class="p-comp">${makeCompDots(p)}</div>
+        <div class="p-comp">${makeCompDots(p)}</div>${p.pipeline==='sales'?`<div class="p-fees">${makeFees(p)}</div>`:''}
         ${flagCell(p.flags)}
       </div>`;
     });
@@ -1091,7 +1150,7 @@ function render(){
   const yt=ytdSales(DATA);
   document.getElementById('sal-ytd').textContent=yt.total;
   document.getElementById('sal-ytd').parentNode.title='Sales completed since '+yt.fy.split('-').reverse().join('/')+' (financial year)';
-  document.getElementById('last-upd').textContent=LAST_SYNC?'Last change received: '+pad(LAST_SYNC.getHours())+':'+pad(LAST_SYNC.getMinutes())+':'+pad(LAST_SYNC.getSeconds()):'';
+  document.getElementById('last-upd').textContent=LAST_SYNC?'Updated '+pad(LAST_SYNC.getHours())+':'+pad(LAST_SYNC.getMinutes()):'';
   // Keep an open card in step with the latest data
   if(openId){
     if(props.find(p=>p.id===openId))openCard(openId);else closeCard();
@@ -1126,7 +1185,7 @@ function openCard(id){
 ${isNew(p)?'<span class="card-badge cb-new">NEW</span>':''}
     <span class="card-badge ${isLet?'cb-let':'cb-sale'}">${isLet?'🏠 Lettings':'🏷 Sales'}</span>
     <span class="card-badge cb-stage c-${colourKey(stage.colour)}">${esc(stage.label)}</span>
-    <span class="card-badge cb-price">${esc(p.price||'–')}</span>${bedsOf(p)!==null?`<span class="card-badge cb-price">${bedsOf(p)===0?'Studio':bedsOf(p)+' bed'}</span>`:''}
+    <span class="card-badge cb-price">${esc(showPrice(p))}</span>${bedsOf(p)!==null?`<span class="card-badge cb-price">${bedsOf(p)===0?'Studio':bedsOf(p)+' bed'}</span>`:''}
     <span class="card-badge cb-days ${di.cls}">${daysTxt}</span>${mv?`<span class="card-badge cb-move ${mv.cls}">${esc(mv.txt)}</span>`:''}`;
 
   const n=negFor(p);
@@ -1191,6 +1250,12 @@ ${isNew(p)?'<span class="card-badge cb-new">NEW</span>':''}
       <div class="comp-rows">${rows}</div>
     </div>`;
 
+  const feeRows=p.pipeline==='sales'?FEES.map(d=>{const st=feeState(p,d.key);if(!st)return'';return`<div class="fee-row"><div class="fi ${st}">${feeIcon(d.key)}</div>${esc(d.label)}<span class="fst ${st}">${st==='paid'?'Paid':'Due'}</span></div>`;}).join(''):'';
+  const feesHtml=feeRows?`
+    <div class="card-section">
+      <div class="cs-title"><span>Fees</span></div>
+      ${feeRows}
+    </div>`:'';
   // Only the board note is shown here. Internal notes stay in admin.
   const noteHtml=p.boardNote?`
     <div class="card-section">
@@ -1203,7 +1268,7 @@ ${isNew(p)?'<span class="card-badge cb-new">NEW</span>':''}
     const u=p.updatedAt?new Date(p.updatedAt):null;
     updHtml=`<div class="card-section"><div class="cs-title" style="margin-bottom:0;text-transform:none;letter-spacing:0;font-weight:500;font-size:11px;color:var(--dim)">Last updated by ${esc(p.updatedBy)}${u?' · '+u.toLocaleDateString('en-GB',{day:'numeric',month:'short'})+', '+pad(u.getHours())+':'+pad(u.getMinutes()):''}</div></div>`;
   }
-  document.getElementById('card-col-right').innerHTML=flagsHtml+compHtml+noteHtml+updHtml;
+  document.getElementById('card-col-right').innerHTML=flagsHtml+compHtml+feesHtml+noteHtml+updHtml;
   document.getElementById('card-bg').classList.add('open');
 }
 

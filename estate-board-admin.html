@@ -350,7 +350,7 @@ table.pt tr.arc td{opacity:.5}
   <div class="tw">
     <table class="pt">
       <thead><tr>
-        <th>Address</th><th>Type</th><th>Status</th><th>Price</th>
+        <th>Address</th><th>Type</th><th>Status</th><th>Beds</th><th>Price</th>
         <th>Negotiator</th><th>Days in stage</th><th>Progress</th><th>Compliance</th><th>Flags</th><th></th>
       </tr></thead>
       <tbody id="tbody"></tbody>
@@ -415,6 +415,12 @@ table.pt tr.arc td{opacity:.5}
         <div class="ptog" style="max-width:260px">
           <button class="popt" id="th-dark" onclick="setTheme('dark')">🌙 Dark</button>
           <button class="popt" id="th-light" onclick="setTheme('light')">☀️ Light</button>
+        </div>
+      </div>
+      <div class="fg"><label class="fl">Animations on the board</label>
+        <div class="ptog" style="max-width:260px">
+          <button class="popt" id="an-on" onclick="setAnim(true)">On</button>
+          <button class="popt" id="an-off" onclick="setAnim(false)">Off</button>
         </div>
       </div>
       <div class="fg"><label class="fl">Negotiator column on the board</label>
@@ -507,6 +513,15 @@ table.pt tr.arc td{opacity:.5}
             <input class="fi" id="fa-addr" type="text" placeholder="e.g. 12 Queens Road, Beeston">
           </div>
           <div class="fg">
+            <label class="fl">Bedrooms</label>
+            <select class="fselect" id="fa-beds" style="max-width:160px">
+              <option value="">Not set</option><option value="0">Studio</option>
+              <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+              <option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
+              <option value="11">11</option><option value="12">12</option>
+            </select>
+          </div>
+          <div class="fg">
             <label class="fl">Pipeline <span class="req">*</span></label>
             <div class="ptog">
               <button class="popt aL" id="opt-L" onclick="setPL('lettings')">🏠 Lettings</button>
@@ -569,6 +584,10 @@ table.pt tr.arc td{opacity:.5}
             <span class="comp-score" id="comp-score">–</span>
           </div>
           <div id="comp-items"></div>
+        </div>
+        <div class="comp-panel" id="fee-panel" style="display:none">
+          <div class="comp-title"><span>Fees · Sales</span><span class="hint" style="text-transform:none;letter-spacing:0">tick off when paid</span></div>
+          <div id="fee-items"></div>
         </div>
       </div>
     </div>
@@ -662,6 +681,16 @@ const COMP={
 const COMP_TONE={ok:'ok',expiring:'warn',expired:'bad',missing:'bad',nodate:'bad',pending:'na',na:'na'};
 const COMP_LABEL={ok:'Done',expiring:'Expiring',expired:'Expired',missing:'Missing',nodate:'No expiry date',pending:'Not yet due',na:'N/A'};
 
+
+/* Sales prices shown in thousands: 230000 or £230,000 → £230K, 1250000 → £1.25M. Lettings unchanged. */
+function showPrice(p){
+  const s=String(p&&p.price||'').trim();
+  if(!s)return'–';
+  if(!p||p.pipeline!=='sales')return s;
+  const k=n=>{if(n>=1e6){return'£'+(+(n/1e6).toFixed(2))+'M';}if(n>=1000){return'£'+(+(n/1000).toFixed(1))+'K';}return'£'+n;};
+  return s.replace(/(£\s?)?(\d{1,3}(?:,\d{3})+|\d{4,})(?:\.\d+)?(?!\s*[kKmM\d])/g,(m,c,num)=>{const n=Number(num.replace(/,/g,''));return n>=10000?k(n):m;})
+          .replace(/(£\s?)?(\d+(?:\.\d+)?)\s*([kKmM])\b/g,(m,c,num,u)=>'£'+num+u.toUpperCase());
+}
 const pad=n=>String(n).padStart(2,'0');
 const ymd=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
 const today=()=>ymd(new Date());
@@ -806,6 +835,12 @@ function isNew(p){
   return p.newUntil>=ts;
 }
 function newDays(){const n=parseInt(CUSTOM.newDays,10);return n>0&&n<=60?n:5;}
+// Bedrooms: the beds field, or "3 bed" in the board note for properties imported from the whiteboard
+function bedsOf(p){
+  if(p&&p.beds!==undefined&&p.beds!==null&&p.beds!=='')return Number(p.beds);
+  const m=/(\d+)\s*bed/i.exec((p&&p.boardNote)||'');return m?Number(m[1]):null;
+}
+function bedsLabel(p){const b=bedsOf(p);return b===null||isNaN(b)?'–':b===0?'Studio':String(b);}
 /* ── END STATUSES & FLAGS ──────────────────────────────────────────────── */
 
 const COLOURS=[
@@ -1029,7 +1064,7 @@ function renderTable(props){
     if(!LOADED.p)msg=['Loading…','Connecting to the shared board'];
     else if(!getProps().length)msg=['No properties yet',isOwner()?'Add a property, or move existing data across from Settings':'Add a property to get started'];
     else msg=['No properties found','Adjust filters or add a property'];
-    tb.innerHTML=`<tr><td colspan="10"><div class="empty"><p>${msg[0]}</p><small>${msg[1]}</small></div></td></tr>`;
+    tb.innerHTML=`<tr><td colspan="11"><div class="empty"><p>${msg[0]}</p><small>${msg[1]}</small></div></td></tr>`;
     return;
   }
   tb.innerHTML=props.map(p=>{
@@ -1049,7 +1084,8 @@ function renderTable(props){
       <td><strong>${esc(p.displayAddr)}</strong>${isNew(p)?' <span class="new-tag sm">NEW</span>':''}${p.archived?'<span class="arc-tag">Archived</span>':''}${mv&&!p.archived?`<div class="t-move ${mv.cls}">${esc(mv.txt)}</div>`:''}</td>
       <td><span class="badge ${p.pipeline==='lettings'?'bL':'bS'}">${p.pipeline==='lettings'?'Lettings':'Sales'}</span></td>
       <td><span class="badge ${p.archived?'b-arc':'c-'+colourKey((stageOf(p.pipeline,p.stage)||{}).colour)}">${esc(stageLabel(p.pipeline,p.stage))}</span></td>
-      <td style="font-variant-numeric:tabular-nums">${esc(p.price||'–')}</td>
+      <td style="font-variant-numeric:tabular-nums">${bedsLabel(p)}</td>
+      <td style="font-variant-numeric:tabular-nums">${esc(showPrice(p))}</td>
       <td><div class="nc"><div class="ni" style="background:${col.bg};color:${col.fg}">${esc(neg?neg.initials:'?')}</div><span class="nn">${esc(neg?neg.name:'Unassigned')}</span></div></td>
       <td><span class="${dc}" style="font-size:12px;font-variant-numeric:tabular-nums">${dl}</span></td>
       <td><div class="pc"><div class="pb"><div class="pbf" style="width:${pct}%"></div></div><span class="pt2">${cnt}/7</span></div></td>
@@ -1135,6 +1171,7 @@ function openModal(id){
     if(p.updatedBy)upd.textContent='Last updated by '+p.updatedBy+(p.updatedAt?' · '+fmtStamp(p.updatedAt):'');
     document.getElementById('fa-addr').value=p.displayAddr||'';
     document.getElementById('fa-price').value=p.price||'';
+    {const b=bedsOf(p);document.getElementById('fa-beds').value=b===null||isNaN(b)?'':String(Math.min(12,b));}
     document.getElementById('fa-date').value=p.enteredStageAt||today();
     document.getElementById('fa-move').value=p.moveDate||'';
     document.getElementById('fa-notes').value=p.notes||'';
@@ -1145,15 +1182,16 @@ function openModal(id){
     document.getElementById('fa-new').checked=isNew(p);
     curCL=[...(p.checklist||Array(7).fill(false))];
     curCompliance=p.compliance?JSON.parse(JSON.stringify(p.compliance)):{};
+    curFees=p.fees?{...p.fees}:{};
     stage=p.stage||'available';
     document.getElementById('btn-arc').textContent=p.archived?'📤 Unarchive':'📦 Archive';
     document.getElementById('mtitle').textContent='Edit: '+p.displayAddr;
     populateNegDrop(p.negotiatorId||'');
   }else{
-    ['fa-addr','fa-price','fa-notes','fa-boardnote'].forEach(i=>document.getElementById(i).value='');
+    ['fa-addr','fa-price','fa-notes','fa-boardnote','fa-beds'].forEach(i=>document.getElementById(i).value='');
     document.getElementById('fa-date').value=today();
     document.getElementById('fa-move').value='';
-    curPL='lettings';curFlags=[];curCL=Array(7).fill(false);curCompliance={};
+    curPL='lettings';curFlags=[];curCL=Array(7).fill(false);curCompliance={};curFees={};
     curNewUntil='';document.getElementById('fa-new').checked=true;
     document.getElementById('mtitle').textContent='Add Property';
     populateNegDrop('');
@@ -1163,6 +1201,7 @@ function openModal(id){
   sel.value=stageOf(curPL,stage)?stage:firstStage(curPL);
   updateMoveField();
   renderCompliance();
+  renderFees();
   renderFlags();
   updateNewHint();
   document.getElementById('mbg').classList.add('open');
@@ -1174,6 +1213,7 @@ function closeModal(){document.getElementById('mbg').classList.remove('open');eI
 function onStageChange(){
   document.getElementById('fa-date').value=today();
   renderCompliance();
+  renderFees();
   updateMoveField();
 }
 function updateMoveField(){
@@ -1195,7 +1235,7 @@ function setPL(pl,init){
   document.getElementById('fa-st').innerHTML=stagesFor(pl).map(s=>`<option value="${s.slug}">${s.label}</option>`).join('');
   document.getElementById('fa-st').value=firstStage(pl);
   renderCL();
-  if(!init){renderCompliance();updateMoveField();}
+  if(!init){renderCompliance();renderFees();updateMoveField();}
 }
 
 function renderCL(){
@@ -1223,6 +1263,41 @@ function updateNewHint(){
 }
 function togFlag(f){curFlags=curFlags.includes(f)?curFlags.filter(x=>x!==f):[...curFlags,f];renderFlags();}
 
+
+/* ── FEES (sales only): just whether each fee has been paid, no amounts ──
+   Stored on the property as fees:{commission,solicitor,survey,mortgage}
+   Values: '' = not set, 'none' = no fee, 'due' = owed, 'paid' = received.
+   Commission counts as due from the second sales status onwards unless marked paid or no fee. */
+const FEES=[
+  {key:'commission',label:'Sales commission', short:'Commission',auto:true},
+  {key:'solicitor', label:'Solicitor referral',short:'Solicitor'},
+  {key:'survey',    label:'Survey referral',   short:'Survey'},
+  {key:'mortgage',  label:'Mortgage referral', short:'Mortgage'}
+];
+function feeState(p,key){
+  const f=(p.fees||{})[key]||'';
+  if(f==='paid'||f==='due'||f==='none')return f==='none'?'':f;
+  const def=FEES.find(x=>x.key===key);
+  if(def&&def.auto&&p.pipeline==='sales'&&stageIdx('sales',p.stage)>=1)return'due';
+  return'';
+}
+let curFees={};
+function renderFees(){
+  const panel=document.getElementById('fee-panel');
+  panel.style.display=curPL==='sales'?'':'none';
+  if(curPL!=='sales')return;
+  const stage=document.getElementById('fa-st').value;
+  document.getElementById('fee-items').innerHTML=FEES.map(d=>{
+    const v=curFees[d.key]||'';
+    const eff=feeState({pipeline:'sales',stage,fees:curFees},d.key);
+    const opts=d.auto
+      ?`<option value=""${v===''?' selected':''}>Due when sold STC</option><option value="due"${v==='due'?' selected':''}>Due</option><option value="paid"${v==='paid'?' selected':''}>Paid</option><option value="none"${v==='none'?' selected':''}>No fee</option>`
+      :`<option value=""${v===''||v==='none'?' selected':''}>No referral</option><option value="due"${v==='due'?' selected':''}>Due</option><option value="paid"${v==='paid'?' selected':''}>Paid</option>`;
+    const lbl=eff==='paid'?'<span class="comp-status ok">Paid</span>':eff==='due'?'<span class="comp-status warn">Due</span>':'<span class="comp-status na">–</span>';
+    return`<div class="comp-item"><div class="comp-row"><span class="comp-lbl">${esc(d.label)}</span>${lbl}</div>
+      <div class="comp-ctrl"><select class="comp-sel" onchange="curFees['${d.key}']=this.value;renderFees()">${opts}</select></div></div>`;
+  }).join('');
+}
 function renderCompliance(){
   const defs=COMP[curPL];
   const stage=document.getElementById('fa-st').value||firstStage(curPL);
@@ -1280,6 +1355,7 @@ function saveProp(){
   const rec={
     displayAddr:addr,
     price:document.getElementById('fa-price').value.trim(),
+    beds:document.getElementById('fa-beds').value===''?null:Number(document.getElementById('fa-beds').value),
     pipeline:curPL,
     stage:document.getElementById('fa-st').value,
     negotiatorId:negId,negotiatorName:neg?neg.name:'',negotiatorInitials:neg?neg.initials:'',
@@ -1289,6 +1365,7 @@ function saveProp(){
     flags:[...curFlags],checklist:[...curCL],compliance,
     newUntil:document.getElementById('fa-new').checked?(curNewUntil||addWorkingDays(today(),newDays())):'',
     moveDate:curPL==='lettings'?(document.getElementById('fa-move').value||''):'',
+    fees:curPL==='sales'?FEES.reduce((o,d)=>{o[d.key]=curFees[d.key]||'';return o;},{}):{},
     ...stamp()
   };
   const id=wasEdit?eId:uid();
@@ -1476,6 +1553,7 @@ function renderSettingsMeta(){
   renderThemeToggle(d.settings.boardTheme);
   if(!ED_DIRTY)renderLists();
   renderNegColToggle(d.settings.showNegotiators!==false);
+  renderAnimToggle(d.settings.animations!==false);
   renderYtdMeta();
   renderNewSettings(false);
   document.getElementById('set-lastexp').textContent=d.settings.lastExport?fmtDate(d.settings.lastExport):'never';
@@ -1599,6 +1677,14 @@ function resetLists(){
 function renderThemeToggle(t){
   document.getElementById('th-dark').className='popt'+(t!=='light'?' aL':'');
   document.getElementById('th-light').className='popt'+(t==='light'?' aL':'');
+}
+function renderAnimToggle(on){
+  document.getElementById('an-on').className='popt'+(on?' aL':'');
+  document.getElementById('an-off').className='popt'+(!on?' aL':'');
+}
+function setAnim(on){
+  renderAnimToggle(on);
+  commit(sDoc().set({animations:on},{merge:true}),on?'Animations on ✓':'Animations off ✓');
 }
 function renderNegColToggle(on){
   document.getElementById('ng-show').className='popt'+(on?' aL':'');
